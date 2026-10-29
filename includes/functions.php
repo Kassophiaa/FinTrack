@@ -12,6 +12,13 @@ function formatDateTime($datetime) {
     return date("M d, Y h:i A", strtotime($datetime));
 }
 
+// URL for a local css/js file with a version stamp, so browsers re-download it whenever it changes
+function asset($path) {
+    $file = BASE_PATH . '/' . $path;
+    $version = is_file($file) ? filemtime($file) : time();
+    return BASE_URL . '/' . $path . '?v=' . $version;
+}
+
 // Escape a value for HTML output
 function e($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');

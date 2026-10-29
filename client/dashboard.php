@@ -247,12 +247,11 @@ include '../includes/navbar.php';
         <div class="card h-100">
             <div class="card-header">
                 <h3 class="card-title">Latest advice</h3>
-                <a href="advice.php" class="small fw-semibold">View all</a>
             </div>
             <?php if ($recent_advice) { ?>
                 <div>
                     <?php foreach ($recent_advice as $a) { ?>
-                        <a class="list-row" href="advice.php">
+                        <a class="list-row" href="advisor_profile.php?advisor_id=<?php echo intval($a['advisor_id']); ?>">
                             <span class="avatar sm"><?php echo e(initials($a['advisor_name'])); ?></span>
                             <div class="row-main">
                                 <div class="row-title"><?php echo e($a['title']); ?></div>

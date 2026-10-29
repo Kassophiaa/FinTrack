@@ -25,4 +25,4 @@
 
 <?php include __DIR__ . '/footer.php'; ?>
 
-<script src="<?php echo JS_PATH; ?>/notification.js"></script>
+<script src="<?php echo asset("js/notification.js"); ?>"></script>

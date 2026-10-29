@@ -1,3 +1,12 @@
+// If a script error stops the page, replace any spinners left behind with a way out
+window.addEventListener("error", function() {
+    setTimeout(function() {
+        var msg = 'Something went wrong while loading. <a href="javascript:location.reload()">Refresh the page</a>';
+        document.querySelectorAll(".table-loading td").forEach(function(td) { td.innerHTML = msg; });
+        document.querySelectorAll(".empty-state .spinner-border").forEach(function(sp) { sp.parentNode.innerHTML = '<p class="mb-0">' + msg + '</p>'; });
+    }, 0);
+});
+
 $(document).ready(function() {
 
     // Mobile sidebar

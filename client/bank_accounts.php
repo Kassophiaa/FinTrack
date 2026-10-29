@@ -21,20 +21,29 @@ include '../includes/navbar.php';
     </div>
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-6 col-xl-4">
-        <div class="stat-card">
-            <div class="stat-top"><span class="stat-label">Total balance</span><span class="icon-chip chip-primary"><i class="bi bi-wallet2"></i></span></div>
-            <div class="stat-value" id="statTotal">—</div>
-            <div class="stat-meta" id="statCount"></div>
+<div class="card mb-4" id="summaryCard">
+    <div class="card-body balance-summary">
+        <div>
+            <div class="small-label mb-1">Total balance</div>
+            <div class="balance-total" id="statTotal">—</div>
+            <div class="text-muted small mt-1" id="statCount"></div>
+        </div>
+        <div>
+            <div class="d-flex justify-content-between align-items-baseline mb-2">
+                <span class="small fw-semibold text-secondary">Where your money is</span>
+            </div>
+            <div class="alloc-bar" id="allocBar" role="img" aria-label="Share of total balance per account"></div>
+            <div class="alloc-legend" id="allocLegend"></div>
         </div>
     </div>
-    <div class="col-md-6 col-xl-8 d-flex align-items-center">
-        <div class="search-input w-100" style="max-width: 360px;">
-            <i class="bi bi-search"></i>
-            <input type="text" class="form-control" id="searchKeyword" placeholder="Search by name or type…">
-            <button type="button" class="btn-clear-search" aria-label="Clear search"><i class="bi bi-x-circle-fill"></i></button>
-        </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-3">
+    <h2 class="h6 mb-0" id="listTitle">Your accounts</h2>
+    <div class="search-input" style="max-width: 320px;">
+        <i class="bi bi-search"></i>
+        <input type="text" class="form-control" id="searchKeyword" placeholder="Search accounts…">
+        <button type="button" class="btn-clear-search" aria-label="Clear search"><i class="bi bi-x-circle-fill"></i></button>
     </div>
 </div>
 
@@ -84,4 +93,4 @@ include '../includes/navbar.php';
 
 <?php include '../includes/footer.php'; ?>
 
-<script src="<?php echo JS_PATH; ?>/bank.js"></script>
+<script src="<?php echo asset("js/bank.js"); ?>"></script>

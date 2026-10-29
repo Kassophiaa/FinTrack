@@ -15,13 +15,6 @@ foreach ($message_model->getConversationPartners($_SESSION['user_id']) as $partn
 
 ?>
 
-<div class="page-header">
-    <div>
-        <h1>Messages</h1>
-        <p>Chat privately with your <?php echo e(strtolower($contact_label)); ?>s.</p>
-    </div>
-</div>
-
 <div class="card chat-layout">
     <div class="chat-contacts">
         <div class="contacts-head">
@@ -89,4 +82,4 @@ var CHAT = <?php echo json_encode([
     'lockedText' => $locked_text,
 ]); ?>;
 </script>
-<script src="<?php echo JS_PATH; ?>/message.js"></script>
+<script src="<?php echo asset("js/message.js"); ?>"></script>

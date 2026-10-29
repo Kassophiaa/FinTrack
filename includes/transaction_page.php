@@ -144,4 +144,4 @@ var TX = <?php echo json_encode([
     'hasAccounts' => $has_accounts,
 ]); ?>;
 </script>
-<script src="<?php echo JS_PATH; ?>/transactions.js"></script>
+<script src="<?php echo asset("js/transactions.js"); ?>"></script>

@@ -153,4 +153,4 @@ include '../includes/navbar.php';
 <?php include '../includes/footer.php'; ?>
 
 <script>var ADVISOR_ID = <?php echo $advisor_id; ?>;</script>
-<script src="<?php echo JS_PATH; ?>/advisor.js"></script>
+<script src="<?php echo asset("js/advisor.js"); ?>"></script>

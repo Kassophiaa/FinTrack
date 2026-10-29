@@ -32,12 +32,10 @@ if ($nav_role == 'admin') {
         ],
         'Work' => [
             ['clients', 'clients.php', 'bi-people', 'My Clients'],
-            ['advice', 'give_advice.php', 'bi-journal-text', 'Advice'],
             ['messages', 'messages.php', 'bi-chat-dots', 'Messages', $nav_unread_messages],
             ['ratings', 'ratings.php', 'bi-star', 'Ratings'],
         ],
         'Account' => [
-            ['notifications', 'notifications.php', 'bi-bell', 'Notifications', $nav_unread_notifications],
             ['profile', 'profile.php', 'bi-person-circle', 'My Profile'],
         ],
     ];
@@ -55,11 +53,9 @@ if ($nav_role == 'admin') {
         ],
         'Advisors' => [
             ['advisors', 'advisors.php', 'bi-search', 'Find Advisors'],
-            ['advice', 'advice.php', 'bi-journal-text', 'My Advice'],
             ['messages', 'messages.php', 'bi-chat-dots', 'Messages', $nav_unread_messages],
         ],
         'Account' => [
-            ['notifications', 'notifications.php', 'bi-bell', 'Notifications', $nav_unread_notifications],
             ['privacy_settings', 'privacy_settings.php', 'bi-shield-lock', 'Data Sharing'],
             ['profile', 'profile.php', 'bi-person-circle', 'My Profile'],
         ],
@@ -102,10 +98,6 @@ $active = $active ?? '';
             <h1 class="topbar-title"><?php echo e($title); ?></h1>
             <div class="topbar-actions">
                 <?php if ($nav_role != 'admin') { ?>
-                    <a href="<?php echo $nav_base; ?>/messages.php" class="topbar-icon" title="Messages">
-                        <i class="bi bi-chat-dots"></i>
-                        <?php if ($nav_unread_messages > 0) { ?><span class="dot-count"><?php echo intval($nav_unread_messages); ?></span><?php } ?>
-                    </a>
                     <a href="<?php echo $nav_base; ?>/notifications.php" class="topbar-icon" title="Notifications">
                         <i class="bi bi-bell"></i>
                         <?php if ($nav_unread_notifications > 0) { ?><span class="dot-count"><?php echo intval($nav_unread_notifications); ?></span><?php } ?>

@@ -165,4 +165,4 @@ include '../includes/navbar.php';
 <?php include '../includes/footer.php'; ?>
 
 <script>var HAS_ACCOUNTS = <?php echo $has_accounts ? 'true' : 'false'; ?>;</script>
-<script src="<?php echo JS_PATH; ?>/investment.js"></script>
+<script src="<?php echo asset("js/investment.js"); ?>"></script>

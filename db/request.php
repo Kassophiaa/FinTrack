@@ -462,8 +462,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit;
         }
 
-        if ($action == "display") {
-            $result = $account->getAccounts($user_id);
+        if ($action == "display" || $action == "search") {
+            $keyword = $action == "search" ? trim($_POST['keyword'] ?? '') : '';
+            $result = $account->getAccountsWithActivity($user_id, $keyword);
             $data = [];
 
             while ($row = $result->fetch_assoc()) {
@@ -532,24 +533,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } else {
                 echo json_encode(["status" => "error", "message" => "Failed to delete account"]);
             }
-            exit;
-        }
-
-        if ($action == "search") {
-            $keyword = trim($_POST['keyword'] ?? '');
-
-            if (empty($keyword)) {
-                $result = $account->getAccounts($user_id);
-            } else {
-                $result = $account->searchAccounts($user_id, $keyword);
-            }
-            $data = [];
-
-            while ($row = $result->fetch_assoc()) {
-                $data[] = $row;
-            }
-
-            echo json_encode(["status" => "success", "data" => $data]);
             exit;
         }
 

@@ -27,4 +27,4 @@ include '../includes/navbar.php';
 
 <?php include '../includes/footer.php'; ?>
 
-<script src="<?php echo JS_PATH; ?>/advisor.js"></script>
+<script src="<?php echo asset("js/advisor.js"); ?>"></script>

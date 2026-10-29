@@ -43,7 +43,7 @@ include '../includes/navbar.php';
         <p>You're advising <?php echo count($clients); ?> client<?php echo count($clients) == 1 ? '' : 's'; ?>. Here's what's happening.</p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-        <a href="give_advice.php" class="btn btn-light"><i class="bi bi-journal-plus"></i> Write advice</a>
+        <a href="clients.php" class="btn btn-light"><i class="bi bi-people"></i> My clients</a>
         <a href="messages.php" class="btn btn-outline-light"><i class="bi bi-chat-dots"></i> Messages</a>
     </div>
 </div>
@@ -57,11 +57,11 @@ include '../includes/navbar.php';
         </a>
     </div>
     <div class="col-xl-3 col-sm-6">
-        <a class="stat-card" href="give_advice.php">
+        <div class="stat-card">
             <div class="stat-top"><span class="stat-label">Advice given</span><span class="icon-chip chip-success"><i class="bi bi-journal-text"></i></span></div>
             <div class="stat-value"><?php echo count($advice_list); ?></div>
             <div class="stat-meta">All time</div>
-        </a>
+        </div>
     </div>
     <div class="col-xl-3 col-sm-6">
         <a class="stat-card" href="ratings.php">
@@ -111,17 +111,17 @@ include '../includes/navbar.php';
         <div class="card h-100">
             <div class="card-header">
                 <h3 class="card-title">Recent advice</h3>
-                <a href="give_advice.php" class="small fw-semibold">View all</a>
             </div>
             <?php if ($advice_list) { ?>
                 <?php foreach (array_slice($advice_list, 0, 5) as $a) { ?>
-                    <div class="list-row">
+                    <a class="list-row" href="client_profile.php?user_id=<?php echo intval($a['user_id']); ?>">
                         <span class="icon-chip chip-primary"><i class="bi bi-lightbulb"></i></span>
                         <div class="row-main">
                             <div class="row-title"><?php echo e($a['title']); ?></div>
                             <div class="row-sub">To <?php echo e($a['client_name']); ?> · <?php echo e(formatDate($a['created_at'])); ?></div>
                         </div>
-                    </div>
+                        <i class="bi bi-chevron-right text-muted"></i>
+                    </a>
                 <?php } ?>
             <?php } else { ?>
                 <div class="empty-state">

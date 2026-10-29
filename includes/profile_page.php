@@ -7,13 +7,6 @@ $is_advisor = $_SESSION['role'] == 'advisor';
 
 ?>
 
-<div class="page-header">
-    <div>
-        <h1>My profile</h1>
-        <p>Manage your personal details and password.</p>
-    </div>
-</div>
-
 <div class="row g-3">
     <div class="col-lg-4">
         <div class="card">
@@ -124,4 +117,4 @@ $is_advisor = $_SESSION['role'] == 'advisor';
 
 <?php include __DIR__ . '/footer.php'; ?>
 
-<script src="<?php echo JS_PATH; ?>/profile.js"></script>
+<script src="<?php echo asset("js/profile.js"); ?>"></script>

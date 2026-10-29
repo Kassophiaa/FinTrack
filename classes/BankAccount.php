@@ -44,6 +44,29 @@ class BankAccount {
         return $this->db->res;
     }
 
+    // Accounts in creation order with this month's money in/out and total transaction count
+    public function getAccountsWithActivity($user_id, $keyword = '') {
+        $sql = "SELECT b.*,
+                    (SELECT COALESCE(SUM(i.amount), 0) FROM income i WHERE i.account_id = b.account_id AND i.status = 'Active' AND i.income_date >= DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')) AS month_in,
+                    (SELECT COALESCE(SUM(e.amount), 0) FROM expenses e WHERE e.account_id = b.account_id AND e.status = 'Active' AND e.expense_date >= DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')) AS month_out,
+                    (SELECT COUNT(*) FROM income i WHERE i.account_id = b.account_id AND i.status = 'Active')
+                  + (SELECT COUNT(*) FROM expenses e WHERE e.account_id = b.account_id AND e.status = 'Active') AS tx_count
+                FROM bank_accounts b
+                WHERE b.user_id = ? AND b.status = 'Active'";
+        $params = [$user_id];
+        $types = "i";
+        if ($keyword !== '') {
+            $search = "%" . $keyword . "%";
+            $sql .= " AND (b.account_name LIKE ? OR b.account_type LIKE ?)";
+            $params[] = $search;
+            $params[] = $search;
+            $types .= "ss";
+        }
+        $sql .= " ORDER BY b.account_id ASC";
+        $this->db->select($sql, $params, $types);
+        return $this->db->res;
+    }
+
     public function getTotalBalance($user_id) {
         $sql = "SELECT SUM(balance) as total FROM bank_accounts WHERE user_id = ? AND status = 'Active'";
         $this->db->select($sql, [$user_id], "i");

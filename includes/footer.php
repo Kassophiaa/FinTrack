@@ -26,4 +26,4 @@
 var BASE_URL = "<?php echo BASE_URL; ?>";
 var MY_ID = "<?php echo intval($_SESSION['user_id']); ?>";
 </script>
-<script src="<?php echo JS_PATH; ?>/script.js"></script>
+<script src="<?php echo asset("js/script.js"); ?>"></script>
