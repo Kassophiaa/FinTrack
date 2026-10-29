@@ -26,10 +26,10 @@ PHP 8 (mysqli, prepared statements), MySQL, jQuery, Bootstrap 5, Bootstrap Icons
 
 ## Setup
 
-1. Put the project anywhere under your web server root (e.g. `xampp/htdocs/finance_web`). The base URL is detected automatically.
+1. Put the project anywhere under your web server root (e.g. `xampp/htdocs/FinTrack`). The base URL is detected automatically.
 2. Create a MySQL database named `finance_db` and its tables.
 3. Copy `db/db_config.example.php` to `db/db_config.php` and fill in your database credentials.
-4. Open the project folder in your browser (e.g. `http://localhost/finance_web`).
+4. Open the project folder in your browser (e.g. `http://localhost/FinTrack`).
 
 ## Project structure
 

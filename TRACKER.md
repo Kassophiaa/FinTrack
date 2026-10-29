@@ -5,8 +5,8 @@ Quick context for future work sessions, so the codebase doesn't need to be re-re
 ## Snapshot
 
 - **Stack:** PHP 8.2 (mysqli, prepared statements) · MySQL `finance_db` · jQuery 3.6 · Bootstrap 5.3 · Bootstrap Icons · Chart.js 4.4 (client dashboard only)
-- **Local URL:** `http://localhost/Complete%20Projects/php/finance_web/` (XAMPP; base URL auto-detected in `includes/config.php`)
-- **Repo:** https://github.com/Kassophiaa/finance_web (public, branch `main`)
+- **Local URL:** `http://localhost/Complete%20Projects/php/FinTrack/` (XAMPP; base URL auto-detected in `includes/config.php`)
+- **Repo:** https://github.com/Kassophiaa/FinTrack (public, branch `main`)
 - **DB credentials:** `db/db_config.php` (git-ignored). Template: `db/db_config.example.php`. Never commit real credentials or passwords.
 - **Roles:** `admin`, `advisor`, `user` (shown as "Client"). Folder per role: `admin/`, `advisor/`, `client/`.
 

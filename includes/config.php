@@ -5,12 +5,12 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Work out the public URL of the project folder so the app runs from any
-// location under the web root (e.g. /finance_web or /Complete Projects/php/finance_web).
+// location under the web root (e.g. /FinTrack or /Complete Projects/php/FinTrack).
 function detectBaseUrl() {
     $docRoot = str_replace('\\', '/', rtrim(realpath($_SERVER['DOCUMENT_ROOT'] ?? '') ?: '', '/\\'));
     $project = str_replace('\\', '/', dirname(__DIR__));
 
-    $path = '/finance_web';
+    $path = '/FinTrack';
     if ($docRoot !== '' && stripos($project, $docRoot) === 0) {
         $path = substr($project, strlen($docRoot));
     }
