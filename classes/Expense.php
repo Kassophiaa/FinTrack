@@ -51,6 +51,28 @@ class Expense {
         return $row['total'] ? $row['total'] : 0;
     }
 
+    // Totals per month for the last $months months: ['YYYY-MM' => total]
+    public function getMonthlyTotals($user_id, $months = 6) {
+        $sql = "SELECT DATE_FORMAT(expense_date, '%Y-%m') as ym, SUM(amount) as total FROM expenses WHERE user_id = ? AND status = 'Active' AND expense_date >= DATE_SUB(DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01'), INTERVAL ? MONTH) GROUP BY ym";
+        $this->db->select($sql, [$user_id, $months - 1], "ii");
+        $totals = [];
+        while ($row = $this->db->res->fetch_assoc()) {
+            $totals[$row['ym']] = floatval($row['total']);
+        }
+        return $totals;
+    }
+
+    // Spending per category for the current month, largest first
+    public function getCategoryTotalsThisMonth($user_id) {
+        $sql = "SELECT expense_type, SUM(amount) as total FROM expenses WHERE user_id = ? AND status = 'Active' AND MONTH(expense_date) = MONTH(CURRENT_DATE()) AND YEAR(expense_date) = YEAR(CURRENT_DATE()) GROUP BY expense_type ORDER BY total DESC";
+        $this->db->select($sql, [$user_id], "i");
+        $rows = [];
+        while ($row = $this->db->res->fetch_assoc()) {
+            $rows[] = ['type' => $row['expense_type'], 'total' => floatval($row['total'])];
+        }
+        return $rows;
+    }
+
     public function getMonthlyExpense($user_id) {
         $sql = "SELECT SUM(amount) as total FROM expenses WHERE user_id = ? AND status = 'Active' AND MONTH(expense_date) = MONTH(CURRENT_DATE()) AND YEAR(expense_date) = YEAR(CURRENT_DATE())";
         $this->db->select($sql, [$user_id], "i");

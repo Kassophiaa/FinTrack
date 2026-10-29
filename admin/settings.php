@@ -9,104 +9,50 @@ $active = "settings";
 
 $admin = new Admin();
 $total_users = $admin->getTotalUsers();
+$role_breakdown = $admin->getRoleBreakdown();
 
-$title = "Settings";
+$db_version = '—';
+$conn = @new mysqli(...array_values(require '../db/db_config.php'));
+if (!$conn->connect_error) {
+    $db_version = $conn->server_info;
+    $conn->close();
+}
+
+$title = "System";
 include '../includes/header.php';
 include '../includes/navbar.php';
 
 ?>
 
-<div class="row">
-    <div class="col-md-3">
-        <?php include '../includes/sidebar_admin.php'; ?>
+<div class="page-header">
+    <div>
+        <h1>System</h1>
+        <p>Server environment and platform summary.</p>
     </div>
-    <div class="col-md-9">
+</div>
 
-        <div class="page-header">
-            <h4><i class="bi bi-gear" style="color: var(--primary);"></i> Settings</h4>
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><h3 class="card-title"><i class="bi bi-hdd-stack"></i> Environment</h3></div>
+            <div class="list-row"><div class="row-main text-secondary">Application URL</div><div class="fw-semibold text-break text-end"><?php echo e(BASE_URL); ?></div></div>
+            <div class="list-row"><div class="row-main text-secondary">PHP version</div><div class="fw-semibold"><?php echo e(phpversion()); ?></div></div>
+            <div class="list-row"><div class="row-main text-secondary">Web server</div><div class="fw-semibold text-end"><?php echo e($_SERVER['SERVER_SOFTWARE'] ?? '—'); ?></div></div>
+            <div class="list-row"><div class="row-main text-secondary">Database server</div><div class="fw-semibold">MySQL <?php echo e($db_version); ?></div></div>
+            <div class="list-row"><div class="row-main text-secondary">Operating system</div><div class="fw-semibold"><?php echo e(PHP_OS); ?></div></div>
+            <div class="list-row"><div class="row-main text-secondary">Server time</div><div class="fw-semibold"><?php echo e(date('M d, Y h:i A')); ?></div></div>
         </div>
-
-        <div id="alert"></div>
-
-        <div class="form-card mb-4">
-            <div class="card-header"><i class="bi bi-gear"></i> Site Settings</div>
-            <div class="card-body">
-                <form id="settingsForm">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Site Name</label>
-                            <input type="text" class="form-control" id="site_name" value="Personal Finance Dashboard">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Currency</label>
-                            <input type="text" class="form-control" id="currency" value="&#8369;">
-                        </div>
-                        <div class="col-12">
-                            <button type="button" class="btn btn-primary" id="btnSaveSettings"><i class="bi bi-save"></i> Save Settings</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <div class="form-card">
-                    <div class="card-header"><i class="bi bi-info-circle"></i> System Information</div>
-                    <div class="card-body">
-                        <table class="table table-sm table-borderless mb-0">
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-code-slash"></i> PHP Version</td>
-                                <td class="text-end fw-bold"><?php echo phpversion(); ?></td>
-                            </tr>
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-hdd"></i> Server</td>
-                                <td class="text-end fw-bold"><?php echo $_SERVER['SERVER_SOFTWARE']; ?></td>
-                            </tr>
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-database"></i> Database</td>
-                                <td class="text-end fw-bold">MySQL (mysqli)</td>
-                            </tr>
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-pc-display"></i> OS</td>
-                                <td class="text-end fw-bold"><?php echo PHP_OS; ?></td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-card">
-                    <div class="card-header"><i class="bi bi-bar-chart-line"></i> System Summary</div>
-                    <div class="card-body">
-                        <table class="table table-sm table-borderless mb-0">
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-people"></i> Total Users</td>
-                                <td class="text-end fw-bold"><?php echo $total_users; ?></td>
-                            </tr>
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-calendar"></i> Server Time</td>
-                                <td class="text-end fw-bold"><?php echo date('M d, Y h:i A'); ?></td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><h3 class="card-title"><i class="bi bi-people"></i> Active accounts</h3></div>
+            <div class="list-row"><span class="icon-chip chip-success"><i class="bi bi-person"></i></span><div class="row-main">Clients</div><div class="fw-bold"><?php echo intval($role_breakdown['user'] ?? 0); ?></div></div>
+            <div class="list-row"><span class="icon-chip chip-info"><i class="bi bi-briefcase"></i></span><div class="row-main">Advisors</div><div class="fw-bold"><?php echo intval($role_breakdown['advisor'] ?? 0); ?></div></div>
+            <div class="list-row"><span class="icon-chip chip-danger"><i class="bi bi-shield-lock"></i></span><div class="row-main">Administrators</div><div class="fw-bold"><?php echo intval($role_breakdown['admin'] ?? 0); ?></div></div>
+            <div class="list-row"><span class="icon-chip chip-primary"><i class="bi bi-people"></i></span><div class="row-main fw-semibold">Total</div><div class="fw-bold"><?php echo intval($total_users); ?></div></div>
+            <div class="card-footer small text-muted">Currency: Philippine Peso (₱)</div>
         </div>
     </div>
 </div>
 
 <?php include '../includes/footer.php'; ?>
-
-<script>
-$(document).ready(function() {
-
-    $("#btnSaveSettings").on("click", function() {
-        var site_name = $("#site_name").val();
-        var currency = $("#currency").val();
-
-        $("#alert").html('<div class="alert alert-success">Settings saved successfully. (Demo only — not persisted to database)</div>');
-    });
-
-});
-</script>

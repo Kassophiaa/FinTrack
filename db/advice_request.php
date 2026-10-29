@@ -1,13 +1,6 @@
 <?php
 
-session_start();
-
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-    echo json_encode(["status" => "error", "message" => "Unauthorized"]);
-    exit;
-}
+require_once __DIR__ . '/api_auth.php';
 
 require_once '../classes/Advice.php';
 require_once '../classes/Rating.php';
@@ -107,6 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $result = $rate->addRating($user_id, $advisor_id, $rating, $comment);
 
         if ($result) {
+            require_once '../classes/Notification.php';
+            (new Notification())->addNotification($advisor_id, 'New rating', ($_SESSION['full_name'] ?? 'A client') . " rated you $rating out of 5.");
             echo json_encode(["status" => "success", "message" => "Rating submitted successfully"]);
         } else {
             echo json_encode(["status" => "error", "message" => "Failed to submit rating"]);

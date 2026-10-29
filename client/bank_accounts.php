@@ -3,126 +3,82 @@
 include '../includes/config.php';
 include '../includes/session.php';
 
-require_once '../classes/BankAccount.php';
-
 $active = "bank_accounts";
 
-$title = "Bank Accounts";
+$title = "Accounts";
 include '../includes/header.php';
 include '../includes/navbar.php';
 
 ?>
 
-<div class="row">
-    <div class="col-md-3">
-        <?php include '../includes/sidebar_client.php'; ?>
+<div class="page-header">
+    <div>
+        <h1>Bank accounts &amp; wallets</h1>
+        <p>Add the places where you keep your money. Income and expenses are recorded against these.</p>
     </div>
-    <div class="col-md-9">
+    <div class="page-actions">
+        <button class="btn btn-primary" id="btnAdd"><i class="bi bi-plus-lg"></i> Add account</button>
+    </div>
+</div>
 
-        <div class="page-header">
-            <h4><i class="bi bi-bank" style="color: var(--primary);"></i> Bank Accounts</h4>
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-4">
+        <div class="stat-card">
+            <div class="stat-top"><span class="stat-label">Total balance</span><span class="icon-chip chip-primary"><i class="bi bi-wallet2"></i></span></div>
+            <div class="stat-value" id="statTotal">—</div>
+            <div class="stat-meta" id="statCount"></div>
         </div>
-
-        <div id="alert"></div>
-
-        <div class="form-card mb-4">
-            <div class="card-header"><i class="bi bi-plus-circle"></i> Add Account</div>
-            <div class="card-body">
-                <form id="accountForm">
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Account Name *</label>
-                            <input type="text" class="form-control" id="account_name" placeholder="e.g. BDO Savings" required>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Account Type *</label>
-                            <select class="form-select" id="account_type_select" required>
-                                <option value="">-- Select Type --</option>
-                                <option value="Savings">Savings</option>
-                                <option value="Checking">Checking</option>
-                                <option value="Credit Card">Credit Card</option>
-                                <option value="E-Wallet">E-Wallet</option>
-                                <option value="Cash">Cash</option>
-                                <option value="Other">Other</option>
-                            </select>
-                            <input type="text" class="form-control mt-1" id="account_type_custom" placeholder="Enter custom account type" style="display:none;">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Balance *</label>
-                            <input type="number" class="form-control" id="balance" step="0.01" placeholder="0.00" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-dark"><i class="bi bi-plus-circle"></i> Add Account</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="table-card">
-            <div class="card-header"><i class="bi bi-list-ul"></i> Account List</div>
-            <div class="card-body">
-                <div class="search-bar mb-3">
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="searchKeyword" placeholder="Search accounts...">
-                        <button class="btn btn-dark" id="btnSearch"><i class="bi bi-search"></i></button>
-                        <button class="btn btn-secondary" id="btnClear"><i class="bi bi-x-circle"></i></button>
-                    </div>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>ID</th>
-                                <th>Account Name</th>
-                                <th>Type</th>
-                                <th>Balance</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="accountTable">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    </div>
+    <div class="col-md-6 col-xl-8 d-flex align-items-center">
+        <div class="search-input w-100" style="max-width: 360px;">
+            <i class="bi bi-search"></i>
+            <input type="text" class="form-control" id="searchKeyword" placeholder="Search by name or type…">
+            <button type="button" class="btn-clear-search" aria-label="Clear search"><i class="bi bi-x-circle-fill"></i></button>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="editModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<div class="row g-3" id="accountList"></div>
+
+<div class="modal fade" id="accountModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" id="accountForm" novalidate>
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-pencil"></i> Edit Account</h5>
+                <h5 class="modal-title" id="accountModalTitle">Add account</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <input type="hidden" id="edit_account_id">
+                <input type="hidden" id="acc_id">
                 <div class="mb-3">
-                    <label class="form-label">Account Name *</label>
-                    <input type="text" class="form-control" id="edit_account_name">
+                    <label class="form-label" for="acc_name">Account name<span class="req">*</span></label>
+                    <input type="text" class="form-control" id="acc_name" placeholder="e.g. BDO Savings, GCash" maxlength="100" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Account Type *</label>
-                    <select class="form-select" id="edit_account_type_select">
-                        <option value="">-- Select Type --</option>
+                    <label class="form-label" for="acc_type_select">Type<span class="req">*</span></label>
+                    <select class="form-select" id="acc_type_select" required>
+                        <option value="">Select type</option>
                         <option value="Savings">Savings</option>
                         <option value="Checking">Checking</option>
                         <option value="Credit Card">Credit Card</option>
                         <option value="E-Wallet">E-Wallet</option>
                         <option value="Cash">Cash</option>
-                        <option value="Other">Other</option>
+                        <option value="Other">Other…</option>
                     </select>
-                    <input type="text" class="form-control mt-1" id="edit_account_type_custom" placeholder="Enter custom account type" style="display:none;">
+                    <input type="text" class="form-control mt-2" id="acc_type_custom" placeholder="Enter account type" maxlength="100" style="display:none;">
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Balance *</label>
-                    <input type="number" class="form-control" id="edit_balance" step="0.01">
+                <div>
+                    <label class="form-label" for="acc_balance">Current balance<span class="req">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text">₱</span>
+                        <input type="number" class="form-control" id="acc_balance" step="0.01" min="0" placeholder="0.00" required>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-dark" id="btnSaveEdit">Save Changes</button>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="accSave">Save</button>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 

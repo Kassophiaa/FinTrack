@@ -3,82 +3,79 @@
 include '../includes/config.php';
 include '../includes/session.php';
 
-require_once '../classes/Admin.php';
-
 $active = "users";
 
-$title = "Manage Users";
+$title = "Users";
 include '../includes/header.php';
 include '../includes/navbar.php';
 
 ?>
 
-<div class="row">
-    <div class="col-md-3">
-        <?php include '../includes/sidebar_admin.php'; ?>
+<div class="page-header">
+    <div>
+        <h1>Users</h1>
+        <p>Manage roles and account access for everyone on the platform.</p>
     </div>
-    <div class="col-md-9">
+</div>
 
-        <div class="page-header">
-            <h4><i class="bi bi-people" style="color: var(--primary);"></i> Manage Users</h4>
-        </div>
-
-        <div id="alert"></div>
-
-        <div class="search-bar">
-            <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" id="searchKeyword" placeholder="Search by name, username, or email...">
-                <button class="btn btn-primary" id="btnSearch"><i class="bi bi-search"></i> Search</button>
-                <button class="btn btn-outline-secondary" id="btnClear"><i class="bi bi-x-circle"></i> Clear</button>
+<div class="card table-card">
+    <div class="card-header">
+        <div class="toolbar w-100">
+            <div class="search-input" style="max-width: 320px;">
+                <i class="bi bi-search"></i>
+                <input type="text" class="form-control" id="searchKeyword" placeholder="Search name, username or email…">
+                <button type="button" class="btn-clear-search" aria-label="Clear search"><i class="bi bi-x-circle-fill"></i></button>
             </div>
+            <select class="form-select" id="roleFilter" style="width: auto;">
+                <option value="">All roles</option>
+                <option value="user">Clients</option>
+                <option value="advisor">Advisors</option>
+                <option value="admin">Administrators</option>
+            </select>
+            <select class="form-select" id="statusFilter" style="width: auto;">
+                <option value="">Any status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+            <span class="ms-auto small text-muted" id="userCount"></span>
         </div>
-
-        <div class="table-card">
-            <div class="card-header"><i class="bi bi-people"></i> All Users</div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>ID</th>
-                                <th>Full Name</th>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>Phone</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="userTable">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Phone</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="userTable"></tbody>
+        </table>
     </div>
 </div>
 
 <div class="modal fade" id="roleModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-pencil"></i> Update Role</h5>
+                <h5 class="modal-title">Change role</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="edit_user_id">
-                <label class="form-label">Select Role</label>
+                <p class="small text-secondary mb-2">User: <strong id="roleUserName"></strong></p>
+                <label class="form-label" for="edit_role">Role</label>
                 <select class="form-select" id="edit_role">
-                    <option value="user">User</option>
+                    <option value="user">Client</option>
                     <option value="advisor">Advisor</option>
-                    <option value="admin">Admin</option>
+                    <option value="admin">Administrator</option>
                 </select>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="btnSaveRole"><i class="bi bi-check-lg"></i> Save</button>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnSaveRole">Save</button>
             </div>
         </div>
     </div>
@@ -89,145 +86,101 @@ include '../includes/navbar.php';
 <script>
 $(document).ready(function() {
 
-    loadUsers();
+    var URL = BASE_URL + "/db/admin_request.php";
+    var rows = [];
+    var roleModal = new bootstrap.Modal(document.getElementById("roleModal"));
+    var roleNames = { user: 'Client', advisor: 'Advisor', admin: 'Administrator' };
+    var rolePills = { user: 'pill-neutral', advisor: 'pill-info', admin: 'pill-danger' };
 
-    function renderRows(data) {
-        var html = "";
-        if (data.length > 0) {
-            $.each(data, function(i, row) {
-                var roleClass = row.role == 'admin' ? 'bg-danger' : (row.role == 'advisor' ? 'bg-primary' : 'bg-secondary');
-                html += '<tr>';
-                html += '<td>' + row.user_id + '</td>';
-                html += '<td><strong>' + escapeHtml(row.full_name) + '</strong></td>';
-                html += '<td>' + escapeHtml(row.username) + '</td>';
-                html += '<td style="color: var(--text-secondary);">' + escapeHtml(row.email) + '</td>';
-                html += '<td>' + escapeHtml(row.phone || '') + '</td>';
-                var statusClass = row.status == 'Active' ? 'bg-success' : 'bg-secondary';
-                var toggleClass = row.status == 'Active' ? 'btn-outline-danger' : 'btn-outline-success';
-                var toggleIcon = row.status == 'Active' ? 'bi bi-toggle-on' : 'bi bi-toggle-off';
-                var toggleTitle = row.status == 'Active' ? 'Deactivate' : 'Activate';
-                html += '<td><span class="badge ' + roleClass + '">' + row.role + '</span></td>';
-                html += '<td><span class="badge ' + statusClass + '">' + row.status + '</span></td>';
-                html += '<td>';
-                html += '<button class="btn btn-sm btn-outline-primary btnEditRole" data-id="' + row.user_id + '" data-role="' + row.role + '"><i class="bi bi-pencil"></i></button> ';
-                html += '<button class="btn btn-sm ' + toggleClass + ' btnToggleStatus" data-id="' + row.user_id + '" data-status="' + row.status + '" title="' + toggleTitle + '"><i class="' + toggleIcon + '"></i></button>';
-                html += '</td>';
-                html += '</tr>';
-            });
-        } else {
-            html = '<tr><td colspan="8" class="text-center">No users found</td></tr>';
-        }
-        return html;
-    }
+    load();
+    bindSearch("#searchKeyword", load);
+    $("#roleFilter, #statusFilter").on("change", render);
 
-    function loadUsers() {
-        showCardLoading("#alert", "Loading users...");
-        $.ajax({
-            url: "<?php echo BASE_URL; ?>/db/admin_request.php",
-            type: "POST",
-            data: { action: "display" },
-            dataType: "json",
-            success: function(response) {
-                $("#alert").html("");
-                $("#userTable").html(renderRows(response.data));
-            }
+    function load(keyword) {
+        showLoading("#userTable", "Loading users...");
+        ajaxPost(URL, { action: keyword ? "search" : "display", keyword: keyword || "" }, function(response) {
+            rows = response.data || [];
+            render();
+        }, function(msg) {
+            $("#userTable").html(emptyRow(5, "bi-wifi-off", "Couldn't load users", msg));
         });
     }
 
-    function searchUsers() {
-        var keyword = $("#searchKeyword").val();
-        if (keyword == "") {
-            loadUsers();
+    function render() {
+        var role = $("#roleFilter").val(), status = $("#statusFilter").val();
+        var list = rows.filter(function(r) { return (!role || r.role === role) && (!status || r.status === status); });
+        $("#userCount").text(list.length + " of " + rows.length + " users");
+        if (!list.length) {
+            $("#userTable").html(emptyRow(5, "bi-people", "No users found", "Try changing the search or filters."));
             return;
         }
-        showCardLoading("#alert", "Searching...");
-        $.ajax({
-            url: "<?php echo BASE_URL; ?>/db/admin_request.php",
-            type: "POST",
-            data: { action: "search", keyword: keyword },
-            dataType: "json",
-            success: function(response) {
-                $("#alert").html("");
-                $("#userTable").html(renderRows(response.data));
+        var html = "";
+        list.forEach(function(row) {
+            var isMe = row.user_id == MY_ID;
+            var active = row.status === 'Active';
+            html += '<tr>';
+            html += '<td><div class="d-flex align-items-center gap-2"><span class="avatar sm">' + escapeHtml(initials(row.full_name)) + '</span><div><div class="cell-title">' + escapeHtml(row.full_name) + (isMe ? ' <span class="pill pill-primary ms-1">You</span>' : '') + '</div><div class="cell-sub">@' + escapeHtml(row.username) + ' · ' + escapeHtml(row.email) + '</div></div></div></td>';
+            html += '<td>' + escapeHtml(row.phone || '—') + '</td>';
+            html += '<td><span class="pill ' + (rolePills[row.role] || 'pill-neutral') + '">' + escapeHtml(roleNames[row.role] || row.role) + '</span></td>';
+            html += '<td><span class="pill ' + (active ? 'pill-success' : 'pill-neutral') + '"><i class="bi bi-circle-fill" style="font-size:.45rem;"></i> ' + escapeHtml(row.status) + '</span></td>';
+            html += '<td class="text-end">';
+            if (!isMe) {
+                html += '<div class="d-inline-flex gap-2">';
+                html += '<button class="btn btn-light btn-sm btnEditRole" data-id="' + row.user_id + '">Change role</button>';
+                html += '<button class="btn btn-sm ' + (active ? 'btn-outline-danger' : 'btn-outline-primary') + ' btnToggleStatus" data-id="' + row.user_id + '">' + (active ? 'Deactivate' : 'Activate') + '</button>';
+                html += '</div>';
+            } else {
+                html += '<span class="small text-muted">—</span>';
             }
+            html += '</td></tr>';
         });
+        $("#userTable").html(html);
     }
 
-    $("#btnSearch").on("click", function() {
-        searchUsers();
-    });
-
-    $("#searchKeyword").on("keypress", function(e) {
-        if (e.which == 13) {
-            e.preventDefault();
-            searchUsers();
-        }
-    });
-
-    $("#btnClear").on("click", function() {
-        $("#searchKeyword").val("");
-        loadUsers();
-    });
+    function findRow(id) {
+        return rows.filter(function(r) { return r.user_id == id; })[0];
+    }
 
     $(document).on("click", ".btnEditRole", function() {
-        var user_id = $(this).data("id");
-        var role = $(this).data("role");
-        $("#edit_user_id").val(user_id);
-        $("#edit_role").val(role);
-        $("#roleModal").modal("show");
+        var row = findRow($(this).data("id"));
+        $("#edit_user_id").val(row.user_id);
+        $("#roleUserName").text(row.full_name);
+        $("#edit_role").val(row.role);
+        roleModal.show();
     });
 
     $("#btnSaveRole").on("click", function() {
-        var user_id = $("#edit_user_id").val();
-        var role = $("#edit_role").val();
-
-        $.ajax({
-            url: "<?php echo BASE_URL; ?>/db/admin_request.php",
-            type: "POST",
-            data: { action: "update_role", user_id: user_id, role: role },
-            dataType: "json",
-            success: function(response) {
-                if (response.status == "success") {
-                    $("#alert").html('<div class="alert alert-success">' + response.message + '</div>');
-                    $("#roleModal").modal("hide");
-                    loadUsers();
-                } else {
-                    $("#alert").html('<div class="alert alert-danger">' + response.message + '</div>');
-                }
+        var $btn = $(this);
+        setButtonLoading($btn, true);
+        ajaxPost(URL, { action: "update_role", user_id: $("#edit_user_id").val(), role: $("#edit_role").val() }, function(response) {
+            setButtonLoading($btn, false);
+            if (response.status == "success") {
+                roleModal.hide();
+                toast("success", response.message);
+                load($("#searchKeyword").val().trim());
+            } else {
+                toast("danger", response.message);
             }
+        }, function(msg) {
+            setButtonLoading($btn, false);
+            toast("danger", msg);
         });
     });
 
-    $(document).on("click", ".btnToggleStatus", function(e) {
-        e.preventDefault();
-        var btn = $(this);
-        var user_id = btn.data("id");
-        var currentStatus = btn.data("status");
-        var newAction = currentStatus == 'Active' ? 'deactivate' : 'activate';
-        if (confirm("Are you sure you want to " + newAction + " this user?")) {
-            btn.prop("disabled", true);
-            $.ajax({
-                url: "<?php echo BASE_URL; ?>/db/admin_request.php",
-                type: "POST",
-                data: { action: "toggle_status", user_id: user_id },
-                dataType: "json",
-                success: function(response) {
-                    if (response.status == "success") {
-                        $("#alert").html('<div class="alert alert-success">' + response.message + '</div>');
-                        loadUsers();
-                    } else {
-                        $("#alert").html('<div class="alert alert-danger">' + response.message + '</div>');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    $("#alert").html('<div class="alert alert-danger">Request failed. Please try again.</div>');
-                },
-                complete: function() {
-                    btn.prop("disabled", false);
-                }
+    $(document).on("click", ".btnToggleStatus", function() {
+        var row = findRow($(this).data("id"));
+        var deactivate = row.status === 'Active';
+        confirmDialog({
+            title: (deactivate ? "Deactivate " : "Activate ") + row.full_name + "?",
+            message: deactivate ? "They will be signed out and won't be able to log in until reactivated." : "They will be able to sign in again.",
+            confirmText: deactivate ? "Deactivate" : "Activate",
+            confirmClass: deactivate ? "btn-danger" : "btn-primary"
+        }, function() {
+            ajaxPost(URL, { action: "toggle_status", user_id: row.user_id }, function(response) {
+                toast(response.status == "success" ? "success" : "danger", response.message);
+                if (response.status == "success") load($("#searchKeyword").val().trim());
             });
-        }
+        });
     });
-
 });
 </script>

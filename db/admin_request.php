@@ -1,11 +1,9 @@
 <?php
 
 error_reporting(E_ERROR | E_PARSE);
-session_start();
+require_once __DIR__ . '/api_auth.php';
 
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+if ($_SESSION['role'] != 'admin') {
     echo json_encode(["status" => "error", "message" => "Unauthorized"]);
     exit;
 }
@@ -173,6 +171,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $data[] = $row;
         }
         echo json_encode(["status" => "success", "data" => $data]);
+        exit;
+    }
+
+    if ($action == "delete_rating") {
+        $rating_id = intval($_POST['rating_id'] ?? 0);
+
+        if ($rating_id <= 0) {
+            echo json_encode(["status" => "error", "message" => "Invalid rating ID"]);
+            exit;
+        }
+
+        $rating = new Rating();
+        if ($rating->deleteRating($rating_id)) {
+            echo json_encode(["status" => "success", "message" => "Rating removed"]);
+        } else {
+            echo json_encode(["status" => "error", "message" => "Failed to remove rating"]);
+        }
         exit;
     }
 

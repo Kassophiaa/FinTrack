@@ -3,42 +3,30 @@ $(document).ready(function() {
     $("#loginForm").on("submit", function(e) {
         e.preventDefault();
 
-        var username = $("#username").val();
+        var username = $("#username").val().trim();
         var password = $("#password").val();
+
+        if (!username || !password) {
+            showAlert("#alert", "danger", "Please enter your username and password.");
+            $(!username ? "#username" : "#password").focus();
+            return;
+        }
+
         var $btn = $(this).find('button[type="submit"]');
         var origText = $btn.html();
         $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm"></span> Signing in...');
 
-        function showError(message) {
-            try {
-                showAlert("#alert", "danger", message);
-            } catch (err) {
-                $("#alert").html('<div class="alert alert-danger alert-dismissible fade show" role="alert">' + escapeHtml(message) + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>');
+        ajaxPost(BASE_URL + "/db/login_request.php", { username: username, password: password }, function(response) {
+            if (response.status == "success") {
+                window.location.href = response.redirect;
+                return;
             }
-        }
-
-        $.ajax({
-            url: BASE_URL + "/db/login_request.php",
-            type: "POST",
-            data: {
-                username: username,
-                password: password
-            },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    window.location.href = response.redirect;
-                } else {
-                    showError(response.message || "Login failed. Please try again.");
-                }
-            },
-            error: function() {
-                showError("Connection error. Please try again.");
-            },
-            complete: function() {
-                $btn.prop("disabled", false).html(origText);
-            }
+            showAlert("#alert", "danger", response.message || "Sign in failed. Please try again.");
+            $("#password").val("").focus();
+            $btn.prop("disabled", false).html(origText);
+        }, function(msg) {
+            showAlert("#alert", "danger", msg);
+            $btn.prop("disabled", false).html(origText);
         });
     });
 

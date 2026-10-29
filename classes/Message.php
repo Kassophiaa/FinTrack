@@ -52,6 +52,28 @@ class Message {
         return $row['total'] ? $row['total'] : 0;
     }
 
+    // Everyone this user has exchanged messages with
+    public function getConversationPartners($user_id) {
+        $sql = "SELECT DISTINCT u.user_id, u.full_name FROM messages m INNER JOIN users u ON u.user_id = IF(m.sender_id = ?, m.receiver_id, m.sender_id) WHERE (m.sender_id = ? OR m.receiver_id = ?) AND m.status = 'Active' ORDER BY u.full_name ASC";
+        $this->db->select($sql, [$user_id, $user_id, $user_id], "iii");
+        $rows = [];
+        while ($row = $this->db->res->fetch_assoc()) {
+            $rows[] = $row;
+        }
+        return $rows;
+    }
+
+    // Unread message counts grouped by sender: [sender_id => count]
+    public function getUnreadCountsBySender($user_id) {
+        $sql = "SELECT sender_id, COUNT(*) as total FROM messages WHERE receiver_id = ? AND is_read = 0 AND status = 'Active' GROUP BY sender_id";
+        $this->db->select($sql, [$user_id], "i");
+        $counts = [];
+        while ($row = $this->db->res->fetch_assoc()) {
+            $counts[intval($row['sender_id'])] = intval($row['total']);
+        }
+        return $counts;
+    }
+
     public function markAsRead($sender_id, $receiver_id) {
         $sql = "UPDATE messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ? AND is_read = 0";
         return $this->db->update($sql, [$sender_id, $receiver_id], "ii");

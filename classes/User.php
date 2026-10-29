@@ -32,6 +32,22 @@ class User {
         return $this->db->insert($sql, [$username, $hashedPassword, $email, $full_name, $phone, $role], "ssssss");
     }
 
+    public function usernameExists($username) {
+        $this->db->select("SELECT user_id FROM users WHERE username = ?", [$username], "s");
+        return $this->db->numRows() > 0;
+    }
+
+    public function emailExists($email, $exclude_user_id = 0) {
+        $this->db->select("SELECT user_id FROM users WHERE email = ? AND user_id <> ?", [$email, $exclude_user_id], "si");
+        return $this->db->numRows() > 0;
+    }
+
+    public function getStatusByUsername($username) {
+        $this->db->select("SELECT status FROM users WHERE username = ?", [$username], "s");
+        $row = $this->db->res ? $this->db->res->fetch_assoc() : null;
+        return $row ? $row['status'] : null;
+    }
+
     public function updateProfile($user_id, $email, $full_name, $phone) {
         $sql = "UPDATE users SET email = ?, full_name = ?, phone = ? WHERE user_id = ?";
         return $this->db->update($sql, [$email, $full_name, $phone, $user_id], "sssi");

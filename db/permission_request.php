@@ -1,13 +1,6 @@
 <?php
 
-session_start();
-
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-    echo json_encode(["status" => "error", "message" => "Unauthorized"]);
-    exit;
-}
+require_once __DIR__ . '/api_auth.php';
 
 require_once '../classes/AdvisorPermission.php';
 require_once '../classes/Notification.php';
@@ -51,11 +44,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $can_give_advice = intval($_POST['can_give_advice'] ?? 0);
         $can_rate = intval($_POST['can_rate'] ?? 0);
 
+        $isNew = $perm->getPermission($user_id, $advisor_id) === null;
         $result = $perm->grantPermission($user_id, $advisor_id, $view_income, $view_expenses, $view_investments, $view_bank_accounts, $can_message, $can_give_advice, $can_rate);
 
         if ($result) {
-            $notif->addNotification($advisor_id, 'Permission Updated', 'A client has updated their financial data access permissions for you.');
-            echo json_encode(["status" => "success", "message" => "Permissions saved successfully"]);
+            $clientName = $_SESSION['full_name'] ?? 'A client';
+            if ($isNew) {
+                $notif->addNotification($advisor_id, 'New client', $clientName . ' has shared their financial data with you and is looking for advice.');
+            } else {
+                $notif->addNotification($advisor_id, 'Permission Updated', $clientName . ' updated what financial data you can access.');
+            }
+            echo json_encode(["status" => "success", "message" => $isNew ? "Access shared. The advisor has been notified." : "Sharing settings updated"]);
         } else {
             echo json_encode(["status" => "error", "message" => "Failed to save permissions"]);
         }
@@ -79,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $result = $perm->revokePermission($user_id, $advisor_id);
 
         if ($result) {
-            echo json_encode(["status" => "success", "message" => "Permission revoked successfully"]);
+            $notif->addNotification($advisor_id, 'Access removed', ($_SESSION['full_name'] ?? 'A client') . ' stopped sharing their financial data with you.');
+            echo json_encode(["status" => "success", "message" => "Access removed. This advisor can no longer see your data."]);
         } else {
             echo json_encode(["status" => "error", "message" => "Failed to revoke permission"]);
         }

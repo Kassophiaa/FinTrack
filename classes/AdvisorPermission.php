@@ -84,13 +84,13 @@ class AdvisorPermission {
     }
 
     public function getPermittedAdvisorsForClient($client_id) {
-        $sql = "SELECT ap.advisor_id, u.full_name, u.email FROM advisor_permissions ap LEFT JOIN users u ON ap.advisor_id = u.user_id WHERE ap.client_id = ? AND ap.status = 'Active' ORDER BY u.full_name ASC";
+        $sql = "SELECT ap.*, u.full_name, u.email FROM advisor_permissions ap INNER JOIN users u ON ap.advisor_id = u.user_id AND u.status = 'Active' WHERE ap.client_id = ? AND ap.status = 'Active' ORDER BY u.full_name ASC";
         $this->db->select($sql, [$client_id], "i");
         return $this->db->res;
     }
 
     public function getPermittedClientsForAdvisor($advisor_id) {
-        $sql = "SELECT ap.client_id, u.user_id, u.full_name, u.username, u.email FROM advisor_permissions ap LEFT JOIN users u ON ap.client_id = u.user_id WHERE ap.advisor_id = ? AND ap.status = 'Active' ORDER BY u.full_name ASC";
+        $sql = "SELECT ap.*, u.user_id, u.full_name, u.username, u.email FROM advisor_permissions ap INNER JOIN users u ON ap.client_id = u.user_id AND u.status = 'Active' WHERE ap.advisor_id = ? AND ap.status = 'Active' ORDER BY u.full_name ASC";
         $this->db->select($sql, [$advisor_id], "i");
         return $this->db->res;
     }

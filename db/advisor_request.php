@@ -1,13 +1,6 @@
 <?php
 
-session_start();
-
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-    echo json_encode(["status" => "error", "message" => "Unauthorized"]);
-    exit;
-}
+require_once __DIR__ . '/api_auth.php';
 
 require_once '../classes/Advisor.php';
 require_once '../classes/Advice.php';
@@ -37,49 +30,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     // CLIENTS
-    if ($action == "display_clients") {
-        $result = $perm->getPermittedClientsForAdvisor($advisor_id);
-        $data = [];
-        if ($result && $result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                if (!empty($row['user_id'])) {
-                    $data[] = [
-                        'user_id' => intval($row['user_id']),
-                        'full_name' => $row['full_name'] ?? '',
-                        'username' => $row['username'] ?? '',
-                        'email' => $row['email'] ?? ''
-                    ];
-                }
-            }
-        }
-        echo json_encode(["status" => "success", "data" => $data]);
-        exit;
-    }
-
-    if ($action == "search_clients") {
-        $keyword = isset($_POST['keyword']) ? trim($_POST['keyword']) : '';
+    if ($action == "display_clients" || $action == "search_clients") {
+        $keyword = $action == "search_clients" ? strtolower(trim($_POST['keyword'] ?? '')) : '';
         $data = [];
 
         $result = $perm->getPermittedClientsForAdvisor($advisor_id);
-        if ($result && $result->num_rows > 0) {
-            $search = strtolower($keyword);
-            while ($row = $result->fetch_assoc()) {
-                if (empty($row['user_id'])) continue;
-                if (!empty($keyword)) {
-                    $name = strtolower($row['full_name'] ?? '');
-                    $uname = strtolower($row['username'] ?? '');
-                    $email = strtolower($row['email'] ?? '');
-                    if (strpos($name, $search) === false && strpos($uname, $search) === false && strpos($email, $search) === false) {
-                        continue;
-                    }
-                }
-                $data[] = [
-                    'user_id' => intval($row['user_id']),
-                    'full_name' => $row['full_name'] ?? '',
-                    'username' => $row['username'] ?? '',
-                    'email' => $row['email'] ?? ''
-                ];
+        while ($result && ($row = $result->fetch_assoc())) {
+            if (empty($row['user_id'])) continue;
+            if ($keyword !== '') {
+                $haystack = strtolower(($row['full_name'] ?? '') . ' ' . ($row['username'] ?? '') . ' ' . ($row['email'] ?? ''));
+                if (strpos($haystack, $keyword) === false) continue;
             }
+            $data[] = [
+                'user_id' => intval($row['user_id']),
+                'full_name' => $row['full_name'] ?? '',
+                'username' => $row['username'] ?? '',
+                'email' => $row['email'] ?? '',
+                'since' => $row['created_at'],
+                'view_income' => intval($row['view_income']),
+                'view_expenses' => intval($row['view_expenses']),
+                'view_investments' => intval($row['view_investments']),
+                'view_bank_accounts' => intval($row['view_bank_accounts']),
+                'can_message' => intval($row['can_message']),
+                'can_give_advice' => intval($row['can_give_advice']),
+            ];
         }
 
         echo json_encode(["status" => "success", "data" => $data]);
@@ -300,6 +274,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $result = $advice->addAdvice($advisor_id, $user_id, $title, $content);
 
         if ($result) {
+            require_once '../classes/Notification.php';
+            (new Notification())->addNotification($user_id, 'New advice received', ($_SESSION['full_name'] ?? 'Your advisor') . ' sent you advice: "' . $title . '"');
             echo json_encode(["status" => "success", "message" => "Advice sent successfully"]);
         } else {
             echo json_encode(["status" => "error", "message" => "Failed to send advice"]);

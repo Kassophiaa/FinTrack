@@ -1,287 +1,183 @@
+// Client-side: advisor directory (advisors.php) and advisor profile (advisor_profile.php)
 $(document).ready(function() {
 
+    var REQ = BASE_URL + "/db/request.php";
+    var PERM = BASE_URL + "/db/permission_request.php";
+    var ADVICE = BASE_URL + "/db/advice_request.php";
+
+    // -----------------------------------------------------------------------
+    // Directory
+    // -----------------------------------------------------------------------
     if ($("#advisorList").length) {
         loadAdvisors();
+        bindSearch("#searchKeyword", loadAdvisors);
     }
 
-    if ($("#advisorName").length) {
-        var params = new URLSearchParams(window.location.search);
-        var advisor_id = params.get("advisor_id");
-
-        if (advisor_id) {
-            loadProfile(advisor_id);
-            loadAdvisorAdvice(advisor_id);
-            loadAdvisorBio(advisor_id);
-            loadPermission(advisor_id);
-        }
-    }
-
-    function loadAdvisors() {
+    function loadAdvisors(keyword) {
         showCardLoading("#advisorList", "Loading advisors...");
-        $.ajax({
-            url: BASE_URL + "/db/request.php",
-            type: "POST",
-            data: { module: "advisors", action: "display_advisors" },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                var html = "";
-                if (response.data && response.data.length > 0) {
-                    $.each(response.data, function(i, row) {
-                        var stars = "";
-                        for (var s = 1; s <= 5; s++) {
-                            stars += s <= Math.round(row.avg_rating) ? '<i class="bi bi-star-fill text-warning"></i>' : '<i class="bi bi-star text-muted"></i>';
-                        }
-                        html += '<div class="col-md-4 mb-4">';
-                        html += '<div class="card h-100">';
-                        html += '<div class="card-body text-center">';
-                        html += '<i class="bi bi-person-circle" style="font-size: 3rem;"></i>';
-                        html += '<h5 class="card-title mt-2">' + escapeHtml(row.full_name) + '</h5>';
-                        html += '<p class="text-muted">' + escapeHtml(row.email) + '</p>';
-                        html += '<p>' + stars + ' (' + escapeHtml(row.avg_rating) + '/5)</p>';
-                        html += '<a href="advisor_profile.php?advisor_id=' + row.user_id + '" class="btn btn-dark btn-sm"><i class="bi bi-eye"></i> View Profile</a>';
-                        html += '</div></div></div>';
-                    });
-                } else {
-                    html = '<div class="col-12"><p class="text-center text-muted">No advisors found</p></div>';
-                }
-                $("#advisorList").html(html);
-            },
-            error: function() {
-                showAlert("#alert", "danger", "Failed to load advisors. Please try again.");
-                $("#advisorList").html('<div class="col-12"><p class="text-center text-danger">Failed to load advisors</p></div>');
+        ajaxPost(REQ, { module: "advisors", action: keyword ? "search_advisors" : "display_advisors", keyword: keyword || "" }, function(response) {
+            var rows = response.data || [];
+            if (!rows.length) {
+                $("#advisorList").html('<div class="col-12"><div class="card">' + (keyword
+                    ? emptyStateHtml("bi-search", "No advisors match your search", "Try a different name or email.")
+                    : emptyStateHtml("bi-people", "No advisors available yet", "Check back soon.")) + '</div></div>');
+                return;
+            }
+            var html = "";
+            rows.forEach(function(row) {
+                html += '<div class="col-sm-6 col-xl-4"><div class="card person-card">';
+                html += '<span class="avatar lg">' + escapeHtml(initials(row.full_name)) + '</span>';
+                html += '<div class="person-name">' + escapeHtml(row.full_name) + '</div>';
+                html += '<div>' + renderStars(row.avg_rating) + ' <span class="small text-muted">' + (row.rating_count ? parseFloat(row.avg_rating).toFixed(1) + ' (' + row.rating_count + ')' : 'No ratings yet') + '</span></div>';
+                html += '<div class="person-bio">' + escapeHtml(row.bio || 'This advisor has not added a bio yet.') + '</div>';
+                if (row.connected) html += '<span class="pill pill-success"><i class="bi bi-check-circle-fill"></i> Connected</span>';
+                html += '<a href="advisor_profile.php?advisor_id=' + row.user_id + '" class="btn ' + (row.connected ? 'btn-light' : 'btn-outline-primary') + ' btn-sm w-100">View profile</a>';
+                html += '</div></div>';
+            });
+            $("#advisorList").html(html);
+        }, function(msg) {
+            $("#advisorList").html('<div class="col-12"><div class="card">' + emptyStateHtml("bi-wifi-off", "Couldn't load advisors", msg) + '</div></div>');
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // Profile
+    // -----------------------------------------------------------------------
+    if (typeof ADVISOR_ID === "undefined") return;
+
+    var permModal = new bootstrap.Modal(document.getElementById("permissionModal"));
+    var permLabels = [
+        ['view_income', 'bi-arrow-down-left-circle', 'View income'],
+        ['view_expenses', 'bi-arrow-up-right-circle', 'View expenses'],
+        ['view_investments', 'bi-graph-up-arrow', 'View investments'],
+        ['view_bank_accounts', 'bi-bank', 'View bank accounts'],
+        ['can_message', 'bi-chat-dots', 'Messaging'],
+        ['can_give_advice', 'bi-journal-text', 'Send advice'],
+        ['can_rate', 'bi-star', 'Rating']
+    ];
+
+    loadProfile();
+    loadPermission();
+    loadAdvice();
+
+    function loadProfile() {
+        ajaxPost(REQ, { module: "advisors", action: "get_advisor_profile", advisor_id: ADVISOR_ID }, function(response) {
+            if (response.status != "success") {
+                $("#advisorName").text("Advisor not found");
+                $("#accessCard, #rateCard").hide();
+                toast("danger", response.message);
+                return;
+            }
+            var d = response.data;
+            $("#advisorAvatar").text(initials(d.full_name));
+            $("#advisorName").text(d.full_name);
+            $("#advisorEmail").text(d.email);
+            $("#advisorRating").html(renderStars(d.avg_rating) + ' <span class="small text-muted">' + (d.rating_count ? parseFloat(d.avg_rating).toFixed(1) + ' from ' + d.rating_count + ' rating' + (d.rating_count == 1 ? '' : 's') : 'No ratings yet') + '</span>');
+            $("#advisorBio").text(d.bio || "No bio provided.");
+            $("#advisorExperience").text(d.experience || "No experience listed.");
+            document.title = d.full_name + " · FinTrack";
+        });
+    }
+
+    function loadPermission() {
+        ajaxPost(PERM, { action: "get_permission", advisor_id: ADVISOR_ID }, function(response) {
+            var p = (response.status == "success") ? response.data : null;
+            if (p) {
+                $("#accessNone").hide();
+                $("#accessGranted").show();
+                var tags = "";
+                permLabels.forEach(function(l) {
+                    var on = p[l[0]] == 1;
+                    tags += '<span class="pill ' + (on ? 'pill-primary' : 'pill-neutral') + '"><i class="bi ' + (on ? l[1] : 'bi-lock') + '"></i> ' + l[2] + (on ? '' : ' · off') + '</span>';
+                });
+                $("#permTags").html(tags);
+                $("#btnMessage").toggle(p.can_message == 1);
+                $("#rateCard").toggle(p.can_rate == 1);
+                $("#rateLocked").toggle(p.can_rate != 1);
+                permLabels.forEach(function(l) { $("#perm_" + l[0]).prop("checked", p[l[0]] == 1); });
+            } else {
+                $("#accessGranted").hide();
+                $("#accessNone").show();
+                $("#rateCard, #rateLocked").hide();
             }
         });
     }
 
-    $("#btnSearch").on("click", function() {
-        var keyword = $("#searchKeyword").val().trim();
-        if (keyword === "") { loadAdvisors(); return; }
-        showCardLoading("#advisorList", "Searching...");
-        $.ajax({
-            url: BASE_URL + "/db/request.php",
-            type: "POST",
-            data: { module: "advisors", action: "search_advisors", keyword: keyword },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                var html = "";
-                if (response.data && response.data.length > 0) {
-                    $.each(response.data, function(i, row) {
-                        var stars = "";
-                        for (var s = 1; s <= 5; s++) {
-                            stars += s <= Math.round(row.avg_rating) ? '<i class="bi bi-star-fill text-warning"></i>' : '<i class="bi bi-star text-muted"></i>';
-                        }
-                        html += '<div class="col-md-4 mb-4">';
-                        html += '<div class="card h-100">';
-                        html += '<div class="card-body text-center">';
-                        html += '<i class="bi bi-person-circle" style="font-size: 3rem;"></i>';
-                        html += '<h5 class="card-title mt-2">' + escapeHtml(row.full_name) + '</h5>';
-                        html += '<p class="text-muted">' + escapeHtml(row.email) + '</p>';
-                        html += '<p>' + stars + ' (' + escapeHtml(row.avg_rating) + '/5)</p>';
-                        html += '<a href="advisor_profile.php?advisor_id=' + row.user_id + '" class="btn btn-dark btn-sm"><i class="bi bi-eye"></i> View Profile</a>';
-                        html += '</div></div></div>';
-                    });
-                } else {
-                    html = '<div class="col-12"><p class="text-center text-muted">No advisors found</p></div>';
-                }
-                $("#advisorList").html(html);
-            },
-            error: function() {
-                showAlert("#alert", "danger", "Search failed. Please try again.");
+    function loadAdvice() {
+        showCardLoading("#adviceList", "Loading advice...");
+        ajaxPost(ADVICE, { action: "display_advisor_advice", advisor_id: ADVISOR_ID }, function(response) {
+            var rows = response.data || [];
+            if (!rows.length) {
+                $("#adviceList").html(emptyStateHtml("bi-journal", "No advice yet", "Advice this advisor sends you will appear here."));
+                return;
             }
+            var html = "";
+            rows.forEach(function(row) {
+                html += '<div class="list-row align-items-start"><span class="icon-chip chip-primary"><i class="bi bi-lightbulb"></i></span><div class="row-main">';
+                html += '<div class="fw-semibold">' + escapeHtml(row.title) + '</div>';
+                html += '<div class="text-secondary small mt-1" style="white-space: pre-wrap;">' + escapeHtml(row.content) + '</div>';
+                html += '<div class="cell-sub mt-1">' + escapeHtml(formatDateTime(row.created_at)) + '</div></div></div>';
+            });
+            $("#adviceList").html(html);
         });
-    });
+    }
 
-    $("#btnClear").on("click", function() {
-        $("#searchKeyword").val("");
-        loadAdvisors();
-    });
+    $("#btnSeekAdvice, #btnEditAccess").on("click", function() { permModal.show(); });
 
-    $("#searchKeyword").on("keypress", function(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            $("#btnSearch").click();
-        }
-    });
-
-    function loadProfile(advisor_id) {
-        $.ajax({
-            url: BASE_URL + "/db/request.php",
-            type: "POST",
-            data: { module: "advisors", action: "get_advisor_profile", advisor_id: advisor_id },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    var d = response.data;
-                    $("#advisorName").text(d.full_name);
-                    $("#advisorEmail").text(d.email);
-                    var stars = "";
-                    for (var s = 1; s <= 5; s++) {
-                        stars += s <= Math.round(d.avg_rating) ? '<i class="bi bi-star-fill text-warning"></i>' : '<i class="bi bi-star text-muted"></i>';
-                    }
-                    $("#advisorRating").html(stars + ' (' + escapeHtml(d.avg_rating) + '/5)');
-                } else {
-                    showAlert("#alert", "danger", response.message);
-                }
-            },
-            error: function() {
-                showAlert("#alert", "danger", "Failed to load advisor profile.");
+    $("#btnSavePermission").on("click", function() {
+        var $btn = $(this);
+        var data = { action: "grant", advisor_id: ADVISOR_ID };
+        permLabels.forEach(function(l) { data[l[0]] = $("#perm_" + l[0]).is(":checked") ? 1 : 0; });
+        setButtonLoading($btn, true, "Saving...");
+        ajaxPost(PERM, data, function(response) {
+            setButtonLoading($btn, false);
+            if (response.status == "success") {
+                permModal.hide();
+                toast("success", response.message);
+                loadPermission();
+            } else {
+                toast("danger", response.message);
             }
+        }, function(msg) {
+            setButtonLoading($btn, false);
+            toast("danger", msg);
         });
-    }
+    });
 
-    function loadAdvisorBio(advisor_id) {
-        $.ajax({
-            url: BASE_URL + "/db/request.php",
-            type: "POST",
-            data: { module: "advisors", action: "get_advisor_profile", advisor_id: advisor_id },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    var d = response.data;
-                    var bioHtml = '';
-                    if (d.bio) bioHtml += '<p><strong>Bio:</strong> ' + escapeHtml(d.bio) + '</p>';
-                    if (d.experience) bioHtml += '<p><strong>Experience:</strong> ' + escapeHtml(d.experience) + '</p>';
-                    if (bioHtml) $("#advisorBio").html(bioHtml);
-                }
-            },
-            error: function() {}
+    $("#btnRevoke").on("click", function() {
+        confirmDialog({
+            title: "Stop sharing with this advisor?",
+            message: "They will immediately lose access to your financial data and won't be able to message you or send advice.",
+            confirmText: "Stop sharing"
+        }, function() {
+            ajaxPost(PERM, { action: "revoke", advisor_id: ADVISOR_ID }, function(response) {
+                toast(response.status == "success" ? "success" : "danger", response.message);
+                if (response.status == "success") loadPermission();
+            });
         });
-    }
-
-    function loadPermission(advisor_id) {
-        $.ajax({
-            url: BASE_URL + "/db/permission_request.php",
-            type: "POST",
-            data: { action: "get_permission", advisor_id: advisor_id },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success" && response.data) {
-                    var p = response.data;
-                    $("#perm_view_income").prop("checked", p.view_income == 1);
-                    $("#perm_view_expenses").prop("checked", p.view_expenses == 1);
-                    $("#perm_view_investments").prop("checked", p.view_investments == 1);
-                    $("#perm_view_bank_accounts").prop("checked", p.view_bank_accounts == 1);
-                    $("#perm_can_message").prop("checked", p.can_message == 1);
-                    $("#perm_can_give_advice").prop("checked", p.can_give_advice == 1);
-                    $("#perm_can_rate").prop("checked", p.can_rate == 1);
-                    $("#btnSeekAdvice").html('<i class="bi bi-pencil"></i> Update Permissions').removeClass("btn-primary").addClass("btn-warning");
-                }
-            },
-            error: function() {}
-        });
-    }
-
-    function loadAdvisorAdvice(advisor_id) {
-        $.ajax({
-            url: BASE_URL + "/db/advice_request.php",
-            type: "POST",
-            data: { action: "display_advisor_advice", advisor_id: advisor_id },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                var html = "";
-                if (response.data && response.data.length > 0) {
-                    $.each(response.data, function(i, row) {
-                        html += '<tr>';
-                        html += '<td>' + escapeHtml(row.title) + '</td>';
-                        html += '<td>' + escapeHtml(row.content.substring(0, 50)) + '...</td>';
-                        html += '<td>' + escapeHtml(row.created_at) + '</td>';
-                        html += '</tr>';
-                    });
-                } else {
-                    html = '<tr><td colspan="3" class="text-center text-muted">No advice from this advisor yet</td></tr>';
-                }
-                $("#adviceTable").html(html);
-            },
-            error: function() {}
-        });
-    }
+    });
 
     $("#rateForm").on("submit", function(e) {
         e.preventDefault();
+        var rating = $("input[name=rate_rating]:checked").val();
+        if (!rating) {
+            toast("danger", "Please choose a star rating.");
+            return;
+        }
         var $form = $(this);
-        var origText = $form.find('button[type="submit"]').html();
         setFormLoading($form, true);
-
-        $.ajax({
-            url: BASE_URL + "/db/advice_request.php",
-            type: "POST",
-            data: {
-                action: "rate_advice",
-                advisor_id: $("#rate_advisor_id").val(),
-                rating: $("#rate_rating").val(),
-                comment: $("#rate_comment").val()
-            },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    showAlert("#alert", "success", response.message);
-                    $form[0].reset();
-                    var params = new URLSearchParams(window.location.search);
-                    var aid = params.get("advisor_id");
-                    if (aid) loadProfile(aid);
-                } else {
-                    showAlert("#alert", "danger", response.message);
-                }
-            },
-            error: function() {
-                showAlert("#alert", "danger", "An error occurred. Please try again.");
-            },
-            complete: function() {
-                setFormLoading($form, false, origText);
+        ajaxPost(ADVICE, { action: "rate_advice", advisor_id: ADVISOR_ID, rating: rating, comment: $("#rate_comment").val().trim() }, function(response) {
+            setFormLoading($form, false);
+            if (response.status == "success") {
+                toast("success", "Thanks! Your rating was submitted.");
+                $form[0].reset();
+                loadProfile();
+            } else {
+                toast("danger", response.message);
             }
+        }, function(msg) {
+            setFormLoading($form, false);
+            toast("danger", msg);
         });
     });
-
-    // Permission Modal
-    $(document).on("click", "#btnSeekAdvice", function() {
-        $("#permissionModal").modal("show");
-    });
-
-    $(document).on("click", "#btnSavePermission", function() {
-        var advisor_id = $("#perm_advisor_id").val();
-        var $btn = $(this);
-        var origText = $btn.html();
-        $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
-
-        $.ajax({
-            url: BASE_URL + "/db/permission_request.php",
-            type: "POST",
-            data: {
-                action: "grant",
-                advisor_id: advisor_id,
-                view_income: $("#perm_view_income").is(":checked") ? 1 : 0,
-                view_expenses: $("#perm_view_expenses").is(":checked") ? 1 : 0,
-                view_investments: $("#perm_view_investments").is(":checked") ? 1 : 0,
-                view_bank_accounts: $("#perm_view_bank_accounts").is(":checked") ? 1 : 0,
-                can_message: $("#perm_can_message").is(":checked") ? 1 : 0,
-                can_give_advice: $("#perm_can_give_advice").is(":checked") ? 1 : 0,
-                can_rate: $("#perm_can_rate").is(":checked") ? 1 : 0
-            },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    showAlert("#alert", "success", response.message);
-                    $("#permissionModal").modal("hide");
-                    loadPermission(advisor_id);
-                } else {
-                    showAlert("#alert", "danger", response.message);
-                }
-            },
-            error: function() {
-                showAlert("#alert", "danger", "An error occurred. Please try again.");
-            },
-            complete: function() {
-                $btn.prop("disabled", false).html(origText);
-            }
-        });
-    });
-
 });

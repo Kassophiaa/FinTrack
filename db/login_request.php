@@ -77,9 +77,17 @@ try {
             exit;
         }
 
+        if ($user->getStatusByUsername($username) === 'Inactive') {
+            echo json_encode([
+                "status" => "error",
+                "message" => "This account has been deactivated. Please contact the administrator."
+            ]);
+            exit;
+        }
+
         echo json_encode([
             "status" => "error",
-            "message" => "Invalid username or password"
+            "message" => "Incorrect username or password"
         ]);
         exit;
     }

@@ -51,6 +51,17 @@ class Income {
         return $row['total'] ? $row['total'] : 0;
     }
 
+    // Totals per month for the last $months months: ['YYYY-MM' => total]
+    public function getMonthlyTotals($user_id, $months = 6) {
+        $sql = "SELECT DATE_FORMAT(income_date, '%Y-%m') as ym, SUM(amount) as total FROM income WHERE user_id = ? AND status = 'Active' AND income_date >= DATE_SUB(DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01'), INTERVAL ? MONTH) GROUP BY ym";
+        $this->db->select($sql, [$user_id, $months - 1], "ii");
+        $totals = [];
+        while ($row = $this->db->res->fetch_assoc()) {
+            $totals[$row['ym']] = floatval($row['total']);
+        }
+        return $totals;
+    }
+
     public function getMonthlyIncome($user_id) {
         $sql = "SELECT SUM(amount) as total FROM income WHERE user_id = ? AND status = 'Active' AND MONTH(income_date) = MONTH(CURRENT_DATE()) AND YEAR(income_date) = YEAR(CURRENT_DATE())";
         $this->db->select($sql, [$user_id], "i");

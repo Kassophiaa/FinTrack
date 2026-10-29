@@ -3,76 +3,62 @@
 include '../includes/config.php';
 include '../includes/session.php';
 
-require_once '../classes/Admin.php';
-
 $active = "ratings";
 
-$title = "All Ratings";
+$title = "Ratings";
 include '../includes/header.php';
 include '../includes/navbar.php';
 
 ?>
 
-<div class="row">
-    <div class="col-md-3">
-        <?php include '../includes/sidebar_admin.php'; ?>
+<div class="page-header">
+    <div>
+        <h1>Advisor ratings</h1>
+        <p>Review client feedback and remove inappropriate ratings.</p>
     </div>
-    <div class="col-md-9">
+</div>
 
-        <div class="page-header">
-            <h4><i class="bi bi-star" style="color: var(--accent);"></i> All Ratings</h4>
+<div class="card table-card">
+    <div class="card-header">
+        <h3 class="card-title" id="ratingCount">Ratings</h3>
+        <div class="search-input" style="max-width: 320px;">
+            <i class="bi bi-search"></i>
+            <input type="text" class="form-control" id="searchKeyword" placeholder="Search client, advisor or comment…">
+            <button type="button" class="btn-clear-search" aria-label="Clear search"><i class="bi bi-x-circle-fill"></i></button>
         </div>
-
-        <div class="search-bar">
-            <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" id="searchKeyword" placeholder="Search ratings by client, advisor, or comment...">
-                <button class="btn btn-primary" id="btnSearch"><i class="bi bi-search"></i> Search</button>
-                <button class="btn btn-outline-secondary" id="btnClear"><i class="bi bi-x-circle"></i> Clear</button>
-            </div>
-        </div>
-
-        <div class="table-card">
-            <div class="card-header"><i class="bi bi-star"></i> All Ratings</div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>ID</th>
-                                <th>Client</th>
-                                <th>Advisor</th>
-                                <th>Rating</th>
-                                <th>Comment</th>
-                                <th>Date</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ratingTable">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Advisor</th>
+                    <th>Rating</th>
+                    <th>Comment</th>
+                    <th>From</th>
+                    <th>Date</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="ratingTable"></tbody>
+        </table>
     </div>
 </div>
 
 <div class="modal fade" id="viewModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-star"></i> Rating Details</h5>
+                <h5 class="modal-title">Rating details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p><strong>Client:</strong> <span id="modalClient"></span></p>
-                <p><strong>Advisor:</strong> <span id="modalAdvisor"></span></p>
-                <p><strong>Rating:</strong> <span id="modalStars"></span></p>
-                <p><strong>Comment:</strong></p>
-                <p id="modalComment" style="background: var(--bg-body); padding: 0.75rem; border-radius: var(--radius-sm);"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <dl class="detail-list">
+                    <div><dt>Advisor</dt><dd id="modalAdvisor"></dd></div>
+                    <div><dt>Client</dt><dd id="modalClient"></dd></div>
+                    <div><dt>Rating</dt><dd id="modalStars"></dd></div>
+                    <div><dt>Comment</dt><dd id="modalComment" style="white-space: pre-wrap;"></dd></div>
+                    <div><dt>Date</dt><dd id="modalDate"></dd></div>
+                </dl>
             </div>
         </div>
     </div>
@@ -83,84 +69,61 @@ include '../includes/navbar.php';
 <script>
 $(document).ready(function() {
 
-    loadRatings();
+    var URL = BASE_URL + "/db/admin_request.php";
+    var rowsById = {};
+    var viewModal = new bootstrap.Modal(document.getElementById("viewModal"));
 
-    function renderStars(rating) {
-        var stars = '';
-        for (var i = 1; i <= 5; i++) {
-            if (i <= rating) {
-                stars += '<i class="bi bi-star-fill" style="color: var(--accent);"></i>';
-            } else {
-                stars += '<i class="bi bi-star" style="color: var(--text-secondary);"></i>';
+    load();
+    bindSearch("#searchKeyword", load);
+
+    function load(keyword) {
+        showLoading("#ratingTable", "Loading ratings...");
+        ajaxPost(URL, { action: keyword ? "search_all_ratings" : "display_all_ratings", keyword: keyword || "" }, function(response) {
+            var rows = response.data || [];
+            rowsById = {};
+            if (!keyword) $("#ratingCount").text(rows.length + " rating" + (rows.length === 1 ? "" : "s"));
+            if (!rows.length) {
+                $("#ratingTable").html(emptyRow(6, keyword ? "bi-search" : "bi-star", keyword ? "No matching ratings" : "No ratings yet", keyword ? "Try a different keyword." : ""));
+                return;
             }
-        }
-        return stars;
-    }
-
-    function renderRows(data) {
-        var html = "";
-        if (data.length > 0) {
-            $.each(data, function(i, row) {
-                var comment = row.comment ? row.comment.substring(0, 50) : '';
-                if (row.comment && row.comment.length > 50) comment += '...';
+            var html = "";
+            rows.forEach(function(row) {
+                rowsById[row.rating_id] = row;
                 html += '<tr>';
-                html += '<td>' + row.rating_id + '</td>';
-                html += '<td><strong>' + row.client_name + '</strong></td>';
-                html += '<td>' + row.advisor_name + '</td>';
+                html += '<td class="cell-title">' + escapeHtml(row.advisor_name || '—') + '</td>';
                 html += '<td>' + renderStars(row.rating) + '</td>';
-                html += '<td>' + comment + '</td>';
-                html += '<td style="color: var(--text-secondary);">' + row.created_at + '</td>';
-                html += '<td><button class="btn btn-sm btn-primary btnView" data-id="' + row.rating_id + '" data-client="' + row.client_name + '" data-advisor="' + row.advisor_name + '" data-rating="' + row.rating + '" data-comment="' + (row.comment ? row.comment.replace(/"/g, '&quot;') : '') + '"><i class="bi bi-eye"></i></button></td>';
-                html += '</tr>';
+                html += '<td class="truncate text-secondary">' + (row.comment ? escapeHtml(row.comment) : '<span class="text-muted fst-italic">No comment</span>') + '</td>';
+                html += '<td>' + escapeHtml(row.client_name || '—') + '</td>';
+                html += '<td style="white-space:nowrap;">' + escapeHtml(formatDate(row.created_at)) + '</td>';
+                html += '<td class="text-end"><div class="row-actions">';
+                html += '<button class="btn-icon btnView" data-id="' + row.rating_id + '" title="View" aria-label="View"><i class="bi bi-eye"></i></button>';
+                html += '<button class="btn-icon danger btnDelete" data-id="' + row.rating_id + '" title="Remove" aria-label="Remove"><i class="bi bi-trash"></i></button>';
+                html += '</div></td></tr>';
             });
-        } else {
-            html = '<tr><td colspan="7" class="text-center">No ratings found</td></tr>';
-        }
-        return html;
-    }
-
-    function loadRatings() {
-        $.ajax({
-            url: "<?php echo BASE_URL; ?>/db/admin_request.php",
-            type: "POST",
-            data: { action: "display_all_ratings" },
-            dataType: "json",
-            success: function(response) {
-                $("#ratingTable").html(renderRows(response.data));
-            }
+            $("#ratingTable").html(html);
+        }, function(msg) {
+            $("#ratingTable").html(emptyRow(6, "bi-wifi-off", "Couldn't load ratings", msg));
         });
     }
-
-    $("#btnSearch").on("click", function() {
-        var keyword = $("#searchKeyword").val();
-        if (keyword == "") {
-            loadRatings();
-            return;
-        }
-        $.ajax({
-            url: "<?php echo BASE_URL; ?>/db/admin_request.php",
-            type: "POST",
-            data: { action: "search_all_ratings", keyword: keyword },
-            dataType: "json",
-            success: function(response) {
-                $("#ratingTable").html(renderRows(response.data));
-            }
-        });
-    });
-
-    $("#btnClear").on("click", function() {
-        $("#searchKeyword").val("");
-        loadRatings();
-    });
 
     $(document).on("click", ".btnView", function() {
-        $("#modalClient").text($(this).data("client"));
-        $("#modalAdvisor").text($(this).data("advisor"));
-        var rating = $(this).data("rating");
-        $("#modalStars").html(renderStars(rating));
-        $("#modalComment").text($(this).data("comment"));
-        $("#viewModal").modal("show");
+        var row = rowsById[$(this).data("id")];
+        $("#modalAdvisor").text(row.advisor_name || '—');
+        $("#modalClient").text(row.client_name || '—');
+        $("#modalStars").html(renderStars(row.rating) + ' <span class="text-muted small">' + parseInt(row.rating, 10) + ' / 5</span>');
+        $("#modalComment").text(row.comment || 'No comment');
+        $("#modalDate").text(formatDateTime(row.created_at));
+        viewModal.show();
     });
 
+    $(document).on("click", ".btnDelete", function() {
+        var row = rowsById[$(this).data("id")];
+        confirmDialog({ title: "Remove this rating?", message: "The rating from " + (row.client_name || "this client") + " for " + (row.advisor_name || "the advisor") + " will no longer count toward their average.", confirmText: "Remove" }, function() {
+            ajaxPost(URL, { action: "delete_rating", rating_id: row.rating_id }, function(response) {
+                toast(response.status == "success" ? "success" : "danger", response.message);
+                if (response.status == "success") load($("#searchKeyword").val().trim());
+            });
+        });
+    });
 });
 </script>

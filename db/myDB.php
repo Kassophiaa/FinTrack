@@ -17,11 +17,13 @@ class myDB {
         $this->password = $config['password'];
         $this->dbname = $config['dbname'];
 
-        $this->conn = new mysqli($this->host, $this->username, $this->password, $this->dbname);
+        mysqli_report(MYSQLI_REPORT_OFF);
+        $this->conn = @new mysqli($this->host, $this->username, $this->password, $this->dbname);
 
         if ($this->conn->connect_error) {
             throw new Exception("Database connection failed: " . $this->conn->connect_error);
         }
+        $this->conn->set_charset('utf8mb4');
     }
 
     public function __destruct() {

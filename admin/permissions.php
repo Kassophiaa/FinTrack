@@ -3,61 +3,48 @@
 include '../includes/config.php';
 include '../includes/session.php';
 
-require_once '../classes/Admin.php';
-
 $active = "permissions";
 
-$title = "Advisor Permissions";
+$title = "Permissions";
 include '../includes/header.php';
 include '../includes/navbar.php';
 
 ?>
 
-<div class="row">
-    <div class="col-md-3">
-        <?php include '../includes/sidebar_admin.php'; ?>
+<div class="page-header">
+    <div>
+        <h1>Data-sharing permissions</h1>
+        <p>Every active connection between a client and an advisor, and what's shared.</p>
     </div>
-    <div class="col-md-9">
+</div>
 
-        <div class="page-header">
-            <h4><i class="bi bi-shield-check" style="color: var(--primary);"></i> Advisor Permissions</h4>
+<div class="card table-card">
+    <div class="card-header">
+        <h3 class="card-title" id="permCount">Connections</h3>
+        <div class="search-input" style="max-width: 320px;">
+            <i class="bi bi-search"></i>
+            <input type="text" class="form-control" id="searchKeyword" placeholder="Search client or advisor…">
+            <button type="button" class="btn-clear-search" aria-label="Clear search"><i class="bi bi-x-circle-fill"></i></button>
         </div>
-
-        <div class="search-bar">
-            <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" id="searchKeyword" placeholder="Search permissions by client or advisor name...">
-                <button class="btn btn-primary" id="btnSearch"><i class="bi bi-search"></i> Search</button>
-                <button class="btn btn-outline-secondary" id="btnClear"><i class="bi bi-x-circle"></i> Clear</button>
-            </div>
-        </div>
-
-        <div class="table-card">
-            <div class="card-header"><i class="bi bi-shield-check"></i> All Permissions</div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>ID</th>
-                                <th>Client Name</th>
-                                <th>Advisor Name</th>
-                                <th>Income</th>
-                                <th>Expenses</th>
-                                <th>Investments</th>
-                                <th>Bank Accts</th>
-                                <th>Message</th>
-                                <th>Advice</th>
-                                <th>Rate</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody id="permTable">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Client</th>
+                    <th>Advisor</th>
+                    <th class="text-center">Income</th>
+                    <th class="text-center">Expenses</th>
+                    <th class="text-center">Investments</th>
+                    <th class="text-center">Accounts</th>
+                    <th class="text-center">Messages</th>
+                    <th class="text-center">Advice</th>
+                    <th class="text-center">Rating</th>
+                    <th>Since</th>
+                </tr>
+            </thead>
+            <tbody id="permTable"></tbody>
+        </table>
     </div>
 </div>
 
@@ -66,87 +53,36 @@ include '../includes/navbar.php';
 <script>
 $(document).ready(function() {
 
-    loadPermissions();
+    var fields = ['view_income', 'view_expenses', 'view_investments', 'view_bank_accounts', 'can_message', 'can_give_advice', 'can_rate'];
 
-    function renderBadge(val) {
+    load();
+    bindSearch("#searchKeyword", load);
+
+    function mark(val) {
         return val == 1
-            ? '<span class="badge bg-success"><i class="bi bi-check-lg"></i> Granted</span>'
-            : '<span class="badge bg-secondary"><i class="bi bi-x-lg"></i> Denied</span>';
+            ? '<i class="bi bi-check-circle-fill text-success" title="Allowed"></i><span class="visually-hidden">Allowed</span>'
+            : '<i class="bi bi-dash-circle" style="color:#c5cdc8;" title="Not allowed"></i><span class="visually-hidden">Not allowed</span>';
     }
 
-    function loadPermissions() {
-        $.ajax({
-            url: "<?php echo BASE_URL; ?>/db/admin_request.php",
-            type: "POST",
-            data: { action: "display_permissions" },
-            dataType: "json",
-            success: function(response) {
-                var html = "";
-                if (response.data.length > 0) {
-                    $.each(response.data, function(i, row) {
-                        html += '<tr>';
-                        html += '<td>' + row.permission_id + '</td>';
-                        html += '<td><strong>' + row.client_name + '</strong></td>';
-                        html += '<td>' + row.advisor_name + '</td>';
-                        html += '<td>' + renderBadge(row.view_income) + '</td>';
-                        html += '<td>' + renderBadge(row.view_expenses) + '</td>';
-                        html += '<td>' + renderBadge(row.view_investments) + '</td>';
-                        html += '<td>' + renderBadge(row.view_bank_accounts) + '</td>';
-                        html += '<td>' + renderBadge(row.can_message) + '</td>';
-                        html += '<td>' + renderBadge(row.can_give_advice) + '</td>';
-                        html += '<td>' + renderBadge(row.can_rate) + '</td>';
-                        html += '<td style="color: var(--text-secondary);">' + row.created_at + '</td>';
-                        html += '</tr>';
-                    });
-                } else {
-                    html = '<tr><td colspan="11" class="text-center">No permissions found</td></tr>';
-                }
-                $("#permTable").html(html);
+    function load(keyword) {
+        showLoading("#permTable", "Loading...");
+        ajaxPost(BASE_URL + "/db/admin_request.php", { action: keyword ? "search_permissions" : "display_permissions", keyword: keyword || "" }, function(response) {
+            var rows = response.data || [];
+            if (!keyword) $("#permCount").text(rows.length + " active connection" + (rows.length === 1 ? "" : "s"));
+            if (!rows.length) {
+                $("#permTable").html(emptyRow(10, keyword ? "bi-search" : "bi-shield-check", keyword ? "No matching connections" : "No connections yet", keyword ? "Try a different name." : "Connections appear when clients share data with advisors."));
+                return;
             }
+            var html = "";
+            rows.forEach(function(row) {
+                html += '<tr><td class="cell-title">' + escapeHtml(row.client_name || '—') + '</td><td>' + escapeHtml(row.advisor_name || '—') + '</td>';
+                fields.forEach(function(f) { html += '<td class="text-center">' + mark(row[f]) + '</td>'; });
+                html += '<td style="white-space:nowrap;">' + escapeHtml(formatDate(row.created_at)) + '</td></tr>';
+            });
+            $("#permTable").html(html);
+        }, function(msg) {
+            $("#permTable").html(emptyRow(10, "bi-wifi-off", "Couldn't load permissions", msg));
         });
     }
-
-    $("#btnSearch").on("click", function() {
-        var keyword = $("#searchKeyword").val();
-        if (keyword == "") {
-            loadPermissions();
-            return;
-        }
-        $.ajax({
-            url: "<?php echo BASE_URL; ?>/db/admin_request.php",
-            type: "POST",
-            data: { action: "search_permissions", keyword: keyword },
-            dataType: "json",
-            success: function(response) {
-                var html = "";
-                if (response.data.length > 0) {
-                    $.each(response.data, function(i, row) {
-                        html += '<tr>';
-                        html += '<td>' + row.permission_id + '</td>';
-                        html += '<td><strong>' + row.client_name + '</strong></td>';
-                        html += '<td>' + row.advisor_name + '</td>';
-                        html += '<td>' + renderBadge(row.view_income) + '</td>';
-                        html += '<td>' + renderBadge(row.view_expenses) + '</td>';
-                        html += '<td>' + renderBadge(row.view_investments) + '</td>';
-                        html += '<td>' + renderBadge(row.view_bank_accounts) + '</td>';
-                        html += '<td>' + renderBadge(row.can_message) + '</td>';
-                        html += '<td>' + renderBadge(row.can_give_advice) + '</td>';
-                        html += '<td>' + renderBadge(row.can_rate) + '</td>';
-                        html += '<td style="color: var(--text-secondary);">' + row.created_at + '</td>';
-                        html += '</tr>';
-                    });
-                } else {
-                    html = '<tr><td colspan="11" class="text-center">No permissions found</td></tr>';
-                }
-                $("#permTable").html(html);
-            }
-        });
-    });
-
-    $("#btnClear").on("click", function() {
-        $("#searchKeyword").val("");
-        loadPermissions();
-    });
-
 });
 </script>

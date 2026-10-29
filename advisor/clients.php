@@ -5,53 +5,40 @@ include '../includes/session.php';
 
 $active = "clients";
 
-$title = "Clients";
+$title = "My Clients";
 include '../includes/header.php';
 include '../includes/navbar.php';
 
 ?>
 
-<div class="row">
-    <div class="col-md-3">
-        <?php include '../includes/sidebar_advisor.php'; ?>
+<div class="page-header">
+    <div>
+        <h1>My clients</h1>
+        <p>Clients who have shared their financial data with you.</p>
     </div>
-    <div class="col-md-9">
+</div>
 
-        <div class="page-header">
-            <h4><i class="bi bi-people" style="color: var(--primary);"></i> Clients</h4>
+<div class="card table-card">
+    <div class="card-header">
+        <h3 class="card-title" id="clientCount">Clients</h3>
+        <div class="search-input" style="max-width: 340px;">
+            <i class="bi bi-search"></i>
+            <input type="text" class="form-control" id="searchKeyword" placeholder="Search name, username or email…">
+            <button type="button" class="btn-clear-search" aria-label="Clear search"><i class="bi bi-x-circle-fill"></i></button>
         </div>
-
-        <div id="alert"></div>
-
-        <div class="search-bar">
-            <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" id="searchKeyword" placeholder="Search clients by name, username, or email...">
-                <button class="btn btn-primary" id="btnSearch">Search</button>
-                <button class="btn btn-outline-secondary" id="btnClear"><i class="bi bi-x-circle"></i> Clear</button>
-            </div>
-        </div>
-
-        <div class="table-card">
-            <div class="card-header"><i class="bi bi-people"></i> Permitted Clients</div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>ID</th>
-                                <th>Full Name</th>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="clientTable">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Client</th>
+                    <th>Shared with you</th>
+                    <th>Since</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="clientTable"></tbody>
+        </table>
     </div>
 </div>
 
@@ -60,87 +47,38 @@ include '../includes/navbar.php';
 <script>
 $(document).ready(function() {
 
-    loadClients();
+    var shareLabels = [['view_income', 'Income'], ['view_expenses', 'Expenses'], ['view_investments', 'Investments'], ['view_bank_accounts', 'Accounts']];
 
-    function loadClients() {
+    load();
+    bindSearch("#searchKeyword", load);
+
+    function load(keyword) {
         showLoading("#clientTable", "Loading clients...");
-        $.ajax({
-            url: "<?php echo BASE_URL; ?>/db/advisor_request.php",
-            type: "POST",
-            data: { action: "display_clients" },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                var html = "";
-                if (response.data && response.data.length > 0) {
-                    $.each(response.data, function(i, row) {
-                        html += '<tr>';
-                        html += '<td>' + escapeHtml(row.user_id) + '</td>';
-                        html += '<td><strong>' + escapeHtml(row.full_name) + '</strong></td>';
-                        html += '<td>' + escapeHtml(row.username) + '</td>';
-                        html += '<td style="color: var(--text-secondary);">' + escapeHtml(row.email) + '</td>';
-                        html += '<td><a href="client_profile.php?user_id=' + row.user_id + '" class="btn btn-sm btn-primary"><i class="bi bi-eye"></i> View</a></td>';
-                        html += '</tr>';
-                    });
-                } else {
-                    html = '<tr><td colspan="5" class="text-center text-muted">No clients found</td></tr>';
-                }
-                $("#clientTable").html(html);
-            },
-            error: function() {
-                showAlert("#alert", "danger", "Failed to load clients. Please try again.");
-                $("#clientTable").html('<tr><td colspan="5" class="text-center text-danger">Failed to load clients</td></tr>');
+        ajaxPost(BASE_URL + "/db/advisor_request.php", { action: keyword ? "search_clients" : "display_clients", keyword: keyword || "" }, function(response) {
+            var rows = response.data || [];
+            if (!keyword) $("#clientCount").text(rows.length + " client" + (rows.length === 1 ? "" : "s"));
+            if (!rows.length) {
+                $("#clientTable").html(keyword
+                    ? emptyRow(4, "bi-search", "No matching clients", "Try a different keyword.")
+                    : emptyRow(4, "bi-people", "No clients yet", "Clients appear here once they share access with you.", '<a href="profile.php" class="btn btn-outline-primary btn-sm">Polish your public profile</a>'));
+                return;
             }
+            var html = "";
+            rows.forEach(function(row) {
+                var shared = shareLabels.filter(function(l) { return row[l[0]] == 1; }).map(function(l) { return '<span class="pill pill-primary">' + l[1] + '</span>'; });
+                html += '<tr>';
+                html += '<td><div class="d-flex align-items-center gap-2"><span class="avatar sm">' + escapeHtml(initials(row.full_name)) + '</span><div><div class="cell-title">' + escapeHtml(row.full_name) + '</div><div class="cell-sub">@' + escapeHtml(row.username) + ' · ' + escapeHtml(row.email) + '</div></div></div></td>';
+                html += '<td><div class="perm-tags">' + (shared.length ? shared.join("") : '<span class="text-muted small">No financial data</span>') + '</div></td>';
+                html += '<td style="white-space:nowrap;">' + escapeHtml(formatDate(row.since)) + '</td>';
+                html += '<td class="text-end"><div class="d-inline-flex gap-2">';
+                if (row.can_message == 1) html += '<a class="btn btn-light btn-sm" href="messages.php?with=' + row.user_id + '"><i class="bi bi-chat-dots"></i></a>';
+                html += '<a class="btn btn-outline-primary btn-sm" href="client_profile.php?user_id=' + row.user_id + '">Open</a>';
+                html += '</div></td></tr>';
+            });
+            $("#clientTable").html(html);
+        }, function(msg) {
+            $("#clientTable").html(emptyRow(4, "bi-wifi-off", "Couldn't load clients", msg));
         });
     }
-
-    $("#btnSearch").on("click", function() {
-        var keyword = $("#searchKeyword").val().trim();
-        if (keyword === "") {
-            loadClients();
-            return;
-        }
-        showLoading("#clientTable", "Searching...");
-        $.ajax({
-            url: "<?php echo BASE_URL; ?>/db/advisor_request.php",
-            type: "POST",
-            data: { action: "search_clients", keyword: keyword },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                var html = "";
-                if (response.data && response.data.length > 0) {
-                    $.each(response.data, function(i, row) {
-                        html += '<tr>';
-                        html += '<td>' + escapeHtml(row.user_id) + '</td>';
-                        html += '<td><strong>' + escapeHtml(row.full_name) + '</strong></td>';
-                        html += '<td>' + escapeHtml(row.username) + '</td>';
-                        html += '<td style="color: var(--text-secondary);">' + escapeHtml(row.email) + '</td>';
-                        html += '<td><a href="client_profile.php?user_id=' + row.user_id + '" class="btn btn-sm btn-primary"><i class="bi bi-eye"></i> View</a></td>';
-                        html += '</tr>';
-                    });
-                } else {
-                    html = '<tr><td colspan="5" class="text-center text-muted">No clients found</td></tr>';
-                }
-                $("#clientTable").html(html);
-            },
-            error: function() {
-                showAlert("#alert", "danger", "Search failed. Please try again.");
-            }
-        });
-    });
-
-    $("#btnClear").on("click", function() {
-        $("#searchKeyword").val("");
-        loadClients();
-    });
-
-    $("#searchKeyword").on("keypress", function(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            $("#btnSearch").click();
-        }
-    });
-
 });
 </script>

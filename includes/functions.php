@@ -1,7 +1,7 @@
 <?php
 
 function formatCurrency($amount) {
-    return "₱" . number_format($amount, 2);
+    return "₱" . number_format((float)$amount, 2);
 }
 
 function formatDate($date) {
@@ -10,6 +10,11 @@ function formatDate($date) {
 
 function formatDateTime($datetime) {
     return date("M d, Y h:i A", strtotime($datetime));
+}
+
+// Escape a value for HTML output
+function e($value) {
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
 function sanitize($data) {
@@ -27,6 +32,27 @@ function isLoggedIn() {
 
 function getRole() {
     return isset($_SESSION['role']) ? $_SESSION['role'] : "";
+}
+
+function roleLabel($role) {
+    $labels = ['admin' => 'Administrator', 'advisor' => 'Advisor', 'user' => 'Client'];
+    return $labels[$role] ?? ucfirst($role);
+}
+
+function dashboardUrl($role) {
+    if ($role == "admin") return ADMIN_PATH . "/dashboard.php";
+    if ($role == "advisor") return ADVISOR_PATH . "/dashboard.php";
+    return CLIENT_PATH . "/dashboard.php";
+}
+
+function initials($name) {
+    $parts = preg_split('/\s+/', trim((string)$name));
+    $out = '';
+    foreach ($parts as $p) {
+        if ($p !== '') $out .= mb_strtoupper(mb_substr($p, 0, 1));
+        if (mb_strlen($out) >= 2) break;
+    }
+    return $out !== '' ? $out : '?';
 }
 
 function generateAlert($type, $message) {

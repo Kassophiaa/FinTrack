@@ -54,6 +54,13 @@ class Rating {
         return $row['average'] ? round($row['average'], 1) : 0;
     }
 
+    public function getRatingCount($advisor_id) {
+        $sql = "SELECT COUNT(*) as total FROM ratings WHERE advisor_id = ? AND status = 'Active'";
+        $this->db->select($sql, [$advisor_id], "i");
+        $row = $this->db->res->fetch_assoc();
+        return intval($row['total']);
+    }
+
     public function searchRatings($advisor_id, $keyword) {
         $search = "%" . $keyword . "%";
         $sql = "SELECT r.*, u.full_name as client_name FROM ratings r LEFT JOIN users u ON r.user_id = u.user_id WHERE r.advisor_id = ? AND r.status = 'Active' AND (u.full_name LIKE ? OR r.comment LIKE ?) ORDER BY r.rating_id DESC";

@@ -1,8 +1,27 @@
 <?php
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-$base_url = "http://localhost/finance_web";
+// Work out the public URL of the project folder so the app runs from any
+// location under the web root (e.g. /finance_web or /Complete Projects/php/finance_web).
+function detectBaseUrl() {
+    $docRoot = str_replace('\\', '/', rtrim(realpath($_SERVER['DOCUMENT_ROOT'] ?? '') ?: '', '/\\'));
+    $project = str_replace('\\', '/', dirname(__DIR__));
+
+    $path = '/finance_web';
+    if ($docRoot !== '' && stripos($project, $docRoot) === 0) {
+        $path = substr($project, strlen($docRoot));
+    }
+    $path = implode('/', array_map('rawurlencode', explode('/', $path)));
+
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    return $scheme . '://' . $host . $path;
+}
+
+$base_url = detectBaseUrl();
 $base_path = dirname(__DIR__);
 
 define('BASE_URL', $base_url);

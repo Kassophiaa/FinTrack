@@ -1,125 +1,68 @@
 $(document).ready(function() {
 
-    if ($("#profileForm").length && $("#username").length && !$("#username").prop("readonly")) {
-        loadProfile();
-    }
+    var URL = BASE_URL + "/db/profile_request.php";
 
-    if ($("#passwordForm").length) {
-        initPasswordChange();
-    }
-
-    function loadProfile() {
-        showCardLoading("#alert", "Loading profile...");
-        $.ajax({
-            url: BASE_URL + "/db/profile_request.php",
-            type: "POST",
-            data: { action: "view_profile" },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    var d = response.data;
-                    $("#full_name").val(d.full_name);
-                    $("#email").val(d.email);
-                    $("#phone").val(d.phone);
-                    $("#username").val(d.username);
-                    $("#role").val(d.role.charAt(0).toUpperCase() + d.role.slice(1));
-                    $("#alert").html("");
-                } else {
-                    showAlert("#alert", "danger", response.message || "Failed to load profile");
-                }
-            },
-            error: function() {
-                showAlert("#alert", "danger", "Failed to load profile. Please refresh the page.");
+    function submitForm($form, data, onSuccess) {
+        setFormLoading($form, true);
+        ajaxPost(URL, data, function(response) {
+            setFormLoading($form, false);
+            if (response.status == "success") {
+                toast("success", response.message);
+                if (onSuccess) onSuccess();
+            } else {
+                toast("danger", response.message);
             }
+        }, function(msg) {
+            setFormLoading($form, false);
+            toast("danger", msg);
         });
     }
 
     $("#profileForm").on("submit", function(e) {
         e.preventDefault();
-        var $form = $(this);
-        var $btn = $form.find('button[type="submit"]');
-        var origText = $btn.html();
-        $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
+        $(".is-invalid").removeClass("is-invalid");
+        var data = { action: "update_profile", full_name: $("#full_name").val().trim(), email: $("#email").val().trim(), phone: $("#phone").val().trim() };
+        if (!data.full_name) { $("#full_name").addClass("is-invalid").focus(); toast("danger", "Please enter your full name."); return; }
+        if (!/^\S+@\S+\.\S+$/.test(data.email)) { $("#email").addClass("is-invalid").focus(); toast("danger", "Please enter a valid email address."); return; }
 
-        $.ajax({
-            url: BASE_URL + "/db/profile_request.php",
-            type: "POST",
-            data: {
-                action: "update_profile",
-                full_name: $("#full_name").val(),
-                email: $("#email").val(),
-                phone: $("#phone").val()
-            },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    showAlert("#alert", "success", response.message);
-                    if (response.data && response.data.full_name) {
-                        $("#full_name").val(response.data.full_name);
-                    }
-                } else {
-                    showAlert("#alert", "danger", response.message);
-                }
-            },
-            error: function() {
-                showAlert("#alert", "danger", "An error occurred. Please try again.");
-            },
-            complete: function() {
-                $btn.prop("disabled", false).html(origText);
-            }
+        submitForm($(this), data, function() {
+            // Keep the name/email shown elsewhere on the page in sync
+            $("#profileName, .user-name, .user-name-text").text(data.full_name);
+            $("#profileAvatar, .sidebar-user .avatar, .topbar-user .avatar").text(initials(data.full_name));
+            $("#profileEmail").text(data.email);
+            $("#profilePhone").html(data.phone ? escapeHtml(data.phone) : '<span class="text-muted">Not set</span>');
         });
     });
 
-    function initPasswordChange() {
-        $("#passwordForm").on("submit", function(e) {
-            e.preventDefault();
-
-            var new_password = $("#new_password").val();
-            var confirm_password = $("#confirm_password").val();
-
-            if (new_password !== confirm_password) {
-                showAlert("#alert", "danger", "New passwords do not match.");
-                return;
-            }
-
-            if (new_password.length < 6) {
-                showAlert("#alert", "danger", "Password must be at least 6 characters.");
-                return;
-            }
-
-            var $form = $(this);
-            var $btn = $form.find('button[type="submit"]');
-            var origText = $btn.html();
-            $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm"></span> Changing...');
-
-            $.ajax({
-                url: BASE_URL + "/db/profile_request.php",
-                type: "POST",
-                data: {
-                    action: "change_password",
-                    current_password: $("#current_password").val(),
-                    new_password: new_password
-                },
-                dataType: "json",
-                timeout: 30000,
-                success: function(response) {
-                    if (response.status == "success") {
-                        showAlert("#alert", "success", response.message);
-                        $form[0].reset();
-                    } else {
-                        showAlert("#alert", "danger", response.message);
-                    }
-                },
-                error: function() {
-                    showAlert("#alert", "danger", "An error occurred. Please try again.");
-                },
-                complete: function() {
-                    $btn.prop("disabled", false).html(origText);
-                }
-            });
-        });
+    function bindCounter(input, counter) {
+        var update = function() { $(counter).text($(input).val().length); };
+        $(input).on("input", update);
+        update();
+    }
+    if ($("#bioForm").length) {
+        bindCounter("#bio", "#bioCount");
+        bindCounter("#experience", "#expCount");
     }
 
+    $("#bioForm").on("submit", function(e) {
+        e.preventDefault();
+        submitForm($(this), { action: "update_bio_experience", bio: $("#bio").val().trim(), experience: $("#experience").val().trim() });
+    });
+
+    $("#passwordForm").on("submit", function(e) {
+        e.preventDefault();
+        $(".is-invalid").removeClass("is-invalid");
+        var current = $("#current_password").val();
+        var next = $("#new_password").val();
+        var confirm = $("#confirm_password").val();
+
+        if (!current) { $("#current_password").addClass("is-invalid").focus(); toast("danger", "Please enter your current password."); return; }
+        if (next.length < 6) { $("#new_password").addClass("is-invalid").focus(); toast("danger", "New password must be at least 6 characters."); return; }
+        if (next !== confirm) { $("#confirm_password").addClass("is-invalid").focus(); toast("danger", "New passwords don't match."); return; }
+
+        var $form = $(this);
+        submitForm($form, { action: "change_password", current_password: current, new_password: next }, function() {
+            $form[0].reset();
+        });
+    });
 });

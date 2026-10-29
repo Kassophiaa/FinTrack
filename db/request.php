@@ -1,13 +1,6 @@
 <?php
 
-session_start();
-
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-    echo json_encode(["status" => "error", "message" => "Unauthorized"]);
-    exit;
-}
+require_once __DIR__ . '/api_auth.php';
 
 require_once '../classes/Income.php';
 require_once '../classes/Expense.php';
@@ -567,39 +560,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         require_once '../classes/Advisor.php';
         require_once '../classes/Rating.php';
+        require_once '../classes/AdvisorPermission.php';
 
-        if ($action == "display_advisors") {
-
-            $adv = new Advisor();
-            $rate = new Rating();
-            $result = $adv->getAdvisors();
-            $data = [];
-
-            while ($row = $result->fetch_assoc()) {
-                $row['avg_rating'] = $rate->getAverageRating($row['user_id']);
-                $data[] = $row;
-            }
-
-            echo json_encode(["status" => "success", "data" => $data]);
-            exit;
+        // Only public advisor fields are sent to the browser
+        function publicAdvisor($row, $rate) {
+            return [
+                'user_id' => intval($row['user_id']),
+                'full_name' => $row['full_name'],
+                'email' => $row['email'],
+                'bio' => $row['bio'],
+                'experience' => $row['experience'],
+                'avg_rating' => $rate->getAverageRating($row['user_id']),
+                'rating_count' => $rate->getRatingCount($row['user_id']),
+            ];
         }
 
-        if ($action == "search_advisors") {
+        if ($action == "display_advisors" || $action == "search_advisors") {
             $keyword = trim($_POST['keyword'] ?? '');
 
             $adv = new Advisor();
             $rate = new Rating();
+            $result = ($action == "search_advisors" && $keyword !== '') ? $adv->searchAdvisors($keyword) : $adv->getAdvisors();
 
-            if (empty($keyword)) {
-                $result = $adv->getAdvisors();
-            } else {
-                $result = $adv->searchAdvisors($keyword);
+            $connected = [];
+            $permRes = (new AdvisorPermission())->getPermittedAdvisorsForClient($user_id);
+            while ($permRes && ($p = $permRes->fetch_assoc())) {
+                $connected[intval($p['advisor_id'])] = true;
             }
-            $data = [];
 
+            $data = [];
             while ($row = $result->fetch_assoc()) {
-                $row['avg_rating'] = $rate->getAverageRating($row['user_id']);
-                $data[] = $row;
+                $item = publicAdvisor($row, $rate);
+                $item['connected'] = isset($connected[$item['user_id']]);
+                $data[] = $item;
             }
 
             echo json_encode(["status" => "success", "data" => $data]);
@@ -619,8 +612,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $result = $adv->getAdvisorById($advisor_id);
 
             if ($result) {
-                $result['avg_rating'] = $rate->getAverageRating($advisor_id);
-                echo json_encode(["status" => "success", "data" => $result]);
+                echo json_encode(["status" => "success", "data" => publicAdvisor($result, $rate)]);
             } else {
                 echo json_encode(["status" => "error", "message" => "Advisor not found"]);
             }

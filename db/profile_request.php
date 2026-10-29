@@ -1,13 +1,6 @@
 <?php
 
-session_start();
-
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-    echo json_encode(["status" => "error", "message" => "Unauthorized"]);
-    exit;
-}
+require_once __DIR__ . '/api_auth.php';
 
 require_once '../classes/User.php';
 require_once '../db/myDB.php';
@@ -48,7 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            echo json_encode(["status" => "error", "message" => "Invalid email format"]);
+            echo json_encode(["status" => "error", "message" => "Please enter a valid email address"]);
+            exit;
+        }
+
+        if ($user->emailExists($email, $user_id)) {
+            echo json_encode(["status" => "error", "message" => "That email is already used by another account"]);
             exit;
         }
 

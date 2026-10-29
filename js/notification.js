@@ -1,190 +1,119 @@
 $(document).ready(function() {
 
-    if ($("#notifTable").length) {
-        loadNotifications();
-    }
+    var URL = BASE_URL + "/db/notification_request.php";
+    var rows = [];
+    var filter = "all";
+    var icons = {
+        'New advice received': ['bi-journal-text', 'chip-primary'],
+        'New rating': ['bi-star', 'chip-warning'],
+        'New client': ['bi-person-plus', 'chip-success'],
+        'Access removed': ['bi-person-dash', 'chip-danger'],
+        'Permission Updated': ['bi-shield-check', 'chip-info']
+    };
 
-    function loadNotifications() {
-        showLoading("#notifTable", "Loading notifications...");
-        $.ajax({
-            url: BASE_URL + "/db/notification_request.php",
-            type: "POST",
-            data: { action: "display" },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                var html = "";
-                if (response.data && response.data.length > 0) {
-                    $.each(response.data, function(i, row) {
-                        var statusBadge = row.is_read == 0 ? '<span class="badge bg-danger">Unread</span>' : '<span class="badge bg-success">Read</span>';
-                        html += '<tr>';
-                        html += '<td>' + escapeHtml(row.notification_id) + '</td>';
-                        html += '<td>' + escapeHtml(row.title) + '</td>';
-                        html += '<td>' + escapeHtml(row.message.substring(0, 50)) + '...</td>';
-                        html += '<td>' + escapeHtml(row.created_at) + '</td>';
-                        html += '<td>' + statusBadge + '</td>';
-                        html += '<td>';
-                        html += '<button class="btn btn-sm btn-info btnView" data-id="' + row.notification_id + '" data-title="' + escapeHtml(row.title) + '" data-message="' + escapeHtml(row.message) + '" data-date="' + escapeHtml(row.created_at) + '"><i class="bi bi-eye"></i></button> ';
-                        if (row.is_read == 0) {
-                            html += '<button class="btn btn-sm btn-warning btnRead" data-id="' + row.notification_id + '"><i class="bi bi-check"></i></button> ';
-                        }
-                        html += '<button class="btn btn-sm btn-danger btnDelete" data-id="' + row.notification_id + '"><i class="bi bi-trash"></i></button>';
-                        html += '</td>';
-                        html += '</tr>';
-                    });
-                } else {
-                    html = '<tr><td colspan="6" class="text-center text-muted">No notifications</td></tr>';
-                }
-                $("#notifTable").html(html);
-            },
-            error: function() {
-                $("#notifTable").html('<tr><td colspan="6" class="text-center text-danger">Failed to load notifications</td></tr>');
-            }
+    load();
+    bindSearch("#searchKeyword", load);
+
+    $("#notifFilter .nav-link").on("click", function() {
+        $("#notifFilter .nav-link").removeClass("active");
+        $(this).addClass("active");
+        filter = $(this).data("filter");
+        render();
+    });
+
+    function load(keyword) {
+        showCardLoading("#notifList", "Loading notifications...");
+        ajaxPost(URL, { action: keyword ? "search" : "display", keyword: keyword || "" }, function(response) {
+            rows = response.data || [];
+            render(!!keyword);
+        }, function(msg) {
+            $("#notifList").html(emptyStateHtml("bi-wifi-off", "Couldn't load notifications", msg));
         });
     }
 
-    $("#btnSearch").on("click", function() {
-        var keyword = $("#searchKeyword").val();
-        if (keyword.trim() == "") { loadNotifications(); return; }
+    function render(isSearch) {
+        var unread = rows.filter(function(r) { return r.is_read == 0; }).length;
+        $("#unreadCount").text(unread).toggle(unread > 0);
+        $("#btnMarkAll").prop("disabled", unread === 0);
 
-        showLoading("#notifTable", "Searching...");
-        $.ajax({
-            url: BASE_URL + "/db/notification_request.php",
-            type: "POST",
-            data: { action: "search", keyword: keyword },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                var html = "";
-                if (response.data && response.data.length > 0) {
-                    $.each(response.data, function(i, row) {
-                        var statusBadge = row.is_read == 0 ? '<span class="badge bg-danger">Unread</span>' : '<span class="badge bg-success">Read</span>';
-                        html += '<tr>';
-                        html += '<td>' + escapeHtml(row.notification_id) + '</td>';
-                        html += '<td>' + escapeHtml(row.title) + '</td>';
-                        html += '<td>' + escapeHtml(row.message.substring(0, 50)) + '...</td>';
-                        html += '<td>' + escapeHtml(row.created_at) + '</td>';
-                        html += '<td>' + statusBadge + '</td>';
-                        html += '<td>';
-                        html += '<button class="btn btn-sm btn-info btnView" data-id="' + row.notification_id + '" data-title="' + escapeHtml(row.title) + '" data-message="' + escapeHtml(row.message) + '" data-date="' + escapeHtml(row.created_at) + '"><i class="bi bi-eye"></i></button> ';
-                        if (row.is_read == 0) {
-                            html += '<button class="btn btn-sm btn-warning btnRead" data-id="' + row.notification_id + '"><i class="bi bi-check"></i></button> ';
-                        }
-                        html += '<button class="btn btn-sm btn-danger btnDelete" data-id="' + row.notification_id + '"><i class="bi bi-trash"></i></button>';
-                        html += '</td>';
-                        html += '</tr>';
-                    });
-                } else {
-                    html = '<tr><td colspan="6" class="text-center text-muted">No notifications found</td></tr>';
-                }
-                $("#notifTable").html(html);
-            },
-            error: function() {
-                showAlert("#alert", "danger", "Search failed. Please try again.");
-            }
-        });
-    });
-
-    $("#btnClear").on("click", function() {
-        $("#searchKeyword").val("");
-        loadNotifications();
-    });
-
-    $("#searchKeyword").on("keypress", function(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            $("#btnSearch").click();
+        var list = filter === "unread" ? rows.filter(function(r) { return r.is_read == 0; }) : rows;
+        if (!list.length) {
+            $("#notifList").html(isSearch
+                ? emptyStateHtml("bi-search", "No matching notifications", "Try a different keyword.")
+                : (filter === "unread"
+                    ? emptyStateHtml("bi-check2-circle", "You're all caught up", "There are no unread notifications.")
+                    : emptyStateHtml("bi-bell", "No notifications yet", "We'll let you know when something happens.")));
+            return;
         }
-    });
+        var html = "";
+        list.forEach(function(row) {
+            var icon = icons[row.title] || ['bi-bell', 'chip-neutral'];
+            var isUnread = row.is_read == 0;
+            html += '<div class="notif-item ' + (isUnread ? 'unread' : '') + '">';
+            html += '<span class="icon-chip ' + icon[1] + '"><i class="bi ' + icon[0] + '"></i></span>';
+            html += '<div class="notif-main"><div class="notif-title">' + escapeHtml(row.title) + (isUnread ? ' <span class="new-dot" title="Unread"></span>' : '') + '</div>';
+            html += '<div class="notif-text">' + escapeHtml(row.message) + '</div>';
+            html += '<div class="notif-time" title="' + escapeHtml(formatDateTime(row.created_at)) + '">' + escapeHtml(timeAgo(row.created_at)) + '</div></div>';
+            html += '<div class="row-actions">';
+            if (isUnread) html += '<button class="btn-icon success btnRead" data-id="' + row.notification_id + '" title="Mark as read" aria-label="Mark as read"><i class="bi bi-check2"></i></button>';
+            html += '<button class="btn-icon danger btnDelete" data-id="' + row.notification_id + '" title="Delete" aria-label="Delete"><i class="bi bi-trash"></i></button>';
+            html += '</div></div>';
+        });
+        $("#notifList").html(html);
+    }
+
+    function setRead(id) {
+        rows.forEach(function(r) { if (r.notification_id == id) r.is_read = 1; });
+    }
+
+    function refreshBadges() {
+        var unread = rows.filter(function(r) { return r.is_read == 0; }).length;
+        $(".sidebar-link.active .nav-count").text(unread).toggle(unread > 0);
+        $('.topbar-icon[title="Notifications"] .dot-count').text(unread).toggle(unread > 0);
+    }
 
     $("#btnMarkAll").on("click", function() {
         var $btn = $(this);
-        var origText = $btn.html();
-        $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm"></span>');
-
-        $.ajax({
-            url: BASE_URL + "/db/notification_request.php",
-            type: "POST",
-            data: { action: "mark_all_read" },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    showAlert("#alert", "success", response.message);
-                    loadNotifications();
-                } else {
-                    showAlert("#alert", "danger", response.message || "Failed");
-                }
-            },
-            error: function() {
-                showAlert("#alert", "danger", "An error occurred");
-            },
-            complete: function() {
-                $btn.prop("disabled", false).html(origText);
+        setButtonLoading($btn, true);
+        ajaxPost(URL, { action: "mark_all_read" }, function(response) {
+            setButtonLoading($btn, false);
+            if (response.status == "success") {
+                rows.forEach(function(r) { r.is_read = 1; });
+                render();
+                refreshBadges();
+                toast("success", response.message);
+            } else {
+                toast("danger", response.message);
             }
         });
-    });
-
-    $(document).on("click", ".btnView", function() {
-        $("#viewTitle").text($(this).data("title"));
-        $("#viewMessage").text($(this).data("message"));
-        $("#viewDate").text($(this).data("date"));
-        $("#viewModal").modal("show");
     });
 
     $(document).on("click", ".btnRead", function() {
         var id = $(this).data("id");
-        var $btn = $(this);
-        $btn.prop("disabled", true);
-
-        $.ajax({
-            url: BASE_URL + "/db/notification_request.php",
-            type: "POST",
-            data: { action: "mark_read", notification_id: id },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    loadNotifications();
-                } else {
-                    showAlert("#alert", "danger", response.message || "Failed");
-                    $btn.prop("disabled", false);
-                }
-            },
-            error: function() {
-                showAlert("#alert", "danger", "An error occurred");
-                $btn.prop("disabled", false);
+        ajaxPost(URL, { action: "mark_read", notification_id: id }, function(response) {
+            if (response.status == "success") {
+                setRead(id);
+                render();
+                refreshBadges();
+            } else {
+                toast("danger", response.message);
             }
         });
     });
 
     $(document).on("click", ".btnDelete", function() {
-        if (!confirm("Are you sure you want to delete this notification?")) return;
-
         var id = $(this).data("id");
-        var $btn = $(this);
-        $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm"></span>');
-
-        $.ajax({
-            url: BASE_URL + "/db/notification_request.php",
-            type: "POST",
-            data: { action: "delete", notification_id: id },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
+        confirmDialog({ title: "Delete this notification?", message: "It will be removed from your list." }, function() {
+            ajaxPost(URL, { action: "delete", notification_id: id }, function(response) {
                 if (response.status == "success") {
-                    showAlert("#alert", "success", response.message);
-                    loadNotifications();
+                    rows = rows.filter(function(r) { return r.notification_id != id; });
+                    render();
+                    refreshBadges();
+                    toast("success", "Notification deleted");
                 } else {
-                    showAlert("#alert", "danger", response.message || "Failed");
-                    $btn.prop("disabled", false).html('<i class="bi bi-trash"></i>');
+                    toast("danger", response.message);
                 }
-            },
-            error: function() {
-                showAlert("#alert", "danger", "An error occurred");
-                $btn.prop("disabled", false).html('<i class="bi bi-trash"></i>');
-            }
+            });
         });
     });
-
 });

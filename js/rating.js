@@ -1,111 +1,57 @@
+// Advisor ratings page
 $(document).ready(function() {
 
-    if ($("#ratingTable").length) {
-        loadRatings();
-    }
+    var URL = BASE_URL + "/db/rating_request.php";
 
-    function loadRatings() {
-        showLoading("#ratingTable", "Loading ratings...");
-        $.ajax({
-            url: BASE_URL + "/db/rating_request.php",
-            type: "POST",
-            data: { action: "display_by_advisor", advisor_id: MY_ID },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                var html = "";
-                if (response.data && response.data.length > 0) {
-                    $.each(response.data, function(i, row) {
-                        var stars = "";
-                        for (var s = 1; s <= 5; s++) {
-                            stars += s <= row.rating ? '<i class="bi bi-star-fill text-warning"></i>' : '<i class="bi bi-star text-muted"></i>';
-                        }
-                        html += '<tr>';
-                        html += '<td>' + escapeHtml(row.rating_id) + '</td>';
-                        html += '<td>' + escapeHtml(row.client_name) + '</td>';
-                        html += '<td>' + stars + ' (' + escapeHtml(String(row.rating)) + '/5)</td>';
-                        html += '<td>' + escapeHtml(row.comment.substring(0, 40)) + '...</td>';
-                        html += '<td>' + escapeHtml(row.created_at) + '</td>';
-                        html += '<td>';
-                        html += '<button class="btn btn-sm btn-info btnView" data-client="' + escapeHtml(row.client_name) + '" data-rating="' + row.rating + '" data-comment="' + escapeHtml(row.comment) + '" data-date="' + escapeHtml(row.created_at) + '"><i class="bi bi-eye"></i></button>';
-                        html += '</td>';
-                        html += '</tr>';
-                    });
-                } else {
-                    html = '<tr><td colspan="6" class="text-center text-muted">No ratings received yet</td></tr>';
-                }
-                $("#ratingTable").html(html);
-            },
-            error: function() {
-                $("#ratingTable").html('<tr><td colspan="6" class="text-center text-danger">Failed to load ratings</td></tr>');
-            }
+    load();
+    bindSearch("#searchKeyword", load);
+
+    function load(keyword) {
+        showCardLoading("#ratingList", "Loading reviews...");
+        var data = keyword ? { action: "search", advisor_id: MY_ID, keyword: keyword } : { action: "display_by_advisor", advisor_id: MY_ID };
+        ajaxPost(URL, data, function(response) {
+            var rows = response.data || [];
+            if (!keyword) renderSummary(rows);
+            renderList(rows, !!keyword);
+        }, function(msg) {
+            $("#ratingList").html(emptyStateHtml("bi-wifi-off", "Couldn't load reviews", msg));
         });
     }
 
-    $("#btnSearch").on("click", function() {
-        var keyword = $("#searchKeyword").val();
-        if (keyword.trim() == "") { loadRatings(); return; }
+    function renderSummary(rows) {
+        var counts = [0, 0, 0, 0, 0, 0], sum = 0;
+        rows.forEach(function(r) { var v = parseInt(r.rating, 10) || 0; counts[v]++; sum += v; });
+        var avg = rows.length ? sum / rows.length : 0;
+        $("#avgRating").text(rows.length ? avg.toFixed(1) : "—");
+        $("#avgStars").html(renderStars(avg));
+        $("#ratingCount").text(rows.length ? "Based on " + rows.length + " rating" + (rows.length === 1 ? "" : "s") : "No ratings yet");
 
-        showLoading("#ratingTable", "Searching...");
-        $.ajax({
-            url: BASE_URL + "/db/rating_request.php",
-            type: "POST",
-            data: { action: "search", advisor_id: MY_ID, keyword: keyword },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                var html = "";
-                if (response.data && response.data.length > 0) {
-                    $.each(response.data, function(i, row) {
-                        var stars = "";
-                        for (var s = 1; s <= 5; s++) {
-                            stars += s <= row.rating ? '<i class="bi bi-star-fill text-warning"></i>' : '<i class="bi bi-star text-muted"></i>';
-                        }
-                        html += '<tr>';
-                        html += '<td>' + escapeHtml(row.rating_id) + '</td>';
-                        html += '<td>' + escapeHtml(row.client_name) + '</td>';
-                        html += '<td>' + stars + ' (' + escapeHtml(String(row.rating)) + '/5)</td>';
-                        html += '<td>' + escapeHtml(row.comment.substring(0, 40)) + '...</td>';
-                        html += '<td>' + escapeHtml(row.created_at) + '</td>';
-                        html += '<td>';
-                        html += '<button class="btn btn-sm btn-info btnView" data-client="' + escapeHtml(row.client_name) + '" data-rating="' + row.rating + '" data-comment="' + escapeHtml(row.comment) + '" data-date="' + escapeHtml(row.created_at) + '"><i class="bi bi-eye"></i></button>';
-                        html += '</td>';
-                        html += '</tr>';
-                    });
-                } else {
-                    html = '<tr><td colspan="6" class="text-center text-muted">No ratings found</td></tr>';
-                }
-                $("#ratingTable").html(html);
-            },
-            error: function() {
-                showAlert("#alert", "danger", "Search failed. Please try again.");
-            }
+        var html = "";
+        for (var s = 5; s >= 1; s--) {
+            var pct = rows.length ? Math.round(counts[s] / rows.length * 100) : 0;
+            html += '<div class="d-flex align-items-center gap-2 mb-2 small"><span style="width: 42px;">' + s + ' <i class="bi bi-star-fill" style="color:#e0a20b;"></i></span>';
+            html += '<div class="bar-track flex-grow-1"><div class="bar-fill" style="width:' + pct + '%; background:#e0a20b;"></div></div>';
+            html += '<span class="text-muted text-end" style="width: 28px;">' + counts[s] + '</span></div>';
+        }
+        $("#distribution").html(html);
+    }
+
+    function renderList(rows, isSearch) {
+        if (!rows.length) {
+            $("#ratingList").html(isSearch
+                ? emptyStateHtml("bi-search", "No matching reviews", "Try a different keyword.")
+                : emptyStateHtml("bi-star", "No reviews yet", "When clients rate your advice, their reviews will appear here."));
+            return;
+        }
+        var html = "";
+        rows.forEach(function(row) {
+            html += '<div class="list-row align-items-start py-3">';
+            html += '<span class="avatar sm">' + escapeHtml(initials(row.client_name)) + '</span>';
+            html += '<div class="row-main"><div class="d-flex justify-content-between flex-wrap gap-2"><span class="fw-semibold">' + escapeHtml(row.client_name || 'Client') + '</span><span class="cell-sub">' + escapeHtml(formatDate(row.created_at)) + '</span></div>';
+            html += '<div class="my-1">' + renderStars(row.rating) + '</div>';
+            html += '<div class="text-secondary small" style="white-space: pre-wrap;">' + (row.comment ? escapeHtml(row.comment) : '<span class="text-muted fst-italic">No comment</span>') + '</div>';
+            html += '</div></div>';
         });
-    });
-
-    $("#btnClear").on("click", function() {
-        $("#searchKeyword").val("");
-        loadRatings();
-    });
-
-    $("#searchKeyword").on("keypress", function(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            $("#btnSearch").click();
-        }
-    });
-
-    $(document).on("click", ".btnView", function() {
-        var rating = $(this).data("rating");
-        var stars = "";
-        for (var s = 1; s <= 5; s++) {
-            stars += s <= rating ? '<i class="bi bi-star-fill text-warning"></i>' : '<i class="bi bi-star text-muted"></i>';
-        }
-        $("#viewClient").text($(this).data("client"));
-        $("#viewRating").html(stars + ' (' + rating + '/5)');
-        $("#viewComment").text($(this).data("comment"));
-        $("#viewDate").text($(this).data("date"));
-        $("#viewModal").modal("show");
-    });
-
+        $("#ratingList").html(html);
+    }
 });

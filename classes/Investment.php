@@ -45,7 +45,7 @@ class Investment {
     }
 
     public function getInvestmentSummary($user_id) {
-        $sql = "SELECT COUNT(*) as total_count, COALESCE(SUM(amount), 0) as total_invested, COALESCE(SUM(current_value), 0) as total_current_value FROM investments WHERE user_id = ? AND status = 'Active'";
+        $sql = "SELECT COUNT(*) as total_count, COALESCE(SUM(amount), 0) as total_invested, COALESCE(SUM(COALESCE(current_value, amount)), 0) as total_current_value FROM investments WHERE user_id = ? AND status = 'Active'";
         $this->db->select($sql, [$user_id], "i");
         $row = $this->db->res->fetch_assoc();
         $total_invested = floatval($row['total_invested']);

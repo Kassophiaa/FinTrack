@@ -1,301 +1,164 @@
 $(document).ready(function() {
 
-    initDropdownCustom("investment_type_select", "investment_type_custom");
-    initDropdownCustom("edit_investment_type_select", "edit_investment_type_custom");
+    var URL = BASE_URL + "/db/request.php";
+    var rowsById = {};
+    var modal = new bootstrap.Modal(document.getElementById("invModal"));
+    var typePills = { 'Stocks': 'pill-info', 'Mutual Funds': 'pill-primary', 'Bonds': 'pill-success', 'Crypto': 'pill-warning', 'Real Estate': 'pill-neutral' };
 
+    initDropdownCustom("inv_type_select", "inv_type_custom");
     loadData();
     loadSummary();
-
-    function formatCurrency(val) {
-        var num = parseFloat(val) || 0;
-        return '\u20B1' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    }
-
-    function getTypeBadge(type) {
-        var t = (type || '').toLowerCase().replace(/\s+/g, '-');
-        var cls = 'badge-other';
-        if (t === 'stocks') cls = 'badge-stocks';
-        else if (t === 'mutual-funds') cls = 'badge-mutual-funds';
-        else if (t === 'bonds') cls = 'badge-bonds';
-        else if (t === 'crypto') cls = 'badge-crypto';
-        else if (t === 'real-estate') cls = 'badge-real-estate';
-        return '<span class="investment-badge ' + cls + '">' + escapeHtml(type || '-') + '</span>';
-    }
-
-    function formatDate(dateStr) {
-        if (!dateStr) return '-';
-        var d = new Date(dateStr);
-        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        var day = d.getDate();
-        if (day < 10) day = '0' + day;
-        return months[d.getMonth()] + ' ' + day + ', ' + d.getFullYear();
-    }
+    bindSearch("#searchKeyword", function(keyword) { loadData(keyword); });
 
     function loadSummary() {
-        $.ajax({
-            url: BASE_URL + "/db/request.php",
-            type: "POST",
-            data: { module: "investment", action: "summary" },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    var d = response.data;
-                    $("#totalInvested").text(formatCurrency(d.total_invested));
-                    $("#currentValue").text(formatCurrency(d.total_current_value));
-                    $("#totalGainLoss").text(formatCurrency(d.total_gain_loss));
-                    $("#totalInvestments").text(d.total_count);
-
-                    var returnStr = parseFloat(d.return_pct).toFixed(2) + "%";
-                    $("#returnPct").text(returnStr);
-
-                    var card = $("#gainLossCard");
-                    if (d.total_gain_loss >= 0) {
-                        card.removeClass("bg-danger").addClass("bg-success");
-                    } else {
-                        card.removeClass("bg-success").addClass("bg-danger");
-                    }
-                }
-            },
-            error: function() {}
+        ajaxPost(URL, { module: "investment", action: "summary" }, function(response) {
+            if (response.status != "success") return;
+            var d = response.data;
+            var gl = parseFloat(d.total_gain_loss) || 0;
+            var pct = parseFloat(d.return_pct) || 0;
+            $("#totalInvested").text(formatCurrency(d.total_invested));
+            $("#currentValue").text(formatCurrency(d.total_current_value));
+            $("#totalGainLoss").text((gl >= 0 ? "+" : "") + formatCurrency(gl)).toggleClass("text-success", gl > 0).toggleClass("text-danger", gl < 0);
+            $("#returnPct").text(d.total_count > 0 ? (pct >= 0 ? "+" : "") + pct.toFixed(2) + "% overall return" : "");
+            $("#gainChip").attr("class", "icon-chip " + (gl > 0 ? "chip-success" : (gl < 0 ? "chip-danger" : "chip-neutral")))
+                .html('<i class="bi ' + (gl < 0 ? 'bi-graph-down' : 'bi-graph-up') + '"></i>');
+            $("#totalInvestments").text(d.total_count);
         });
     }
 
-    function renderTable(data) {
-        var html = "";
-        if (data && data.length > 0) {
-            $.each(data, function(i, row) {
-                var invested = parseFloat(row.amount) || 0;
-                var hasCurrent = row.current_value !== null && row.current_value !== '' && row.current_value !== undefined;
-                var current = hasCurrent ? parseFloat(row.current_value) : null;
-                var gainLoss = current !== null ? current - invested : null;
-                var returnPct = (gainLoss !== null && invested > 0) ? ((gainLoss / invested) * 100) : null;
+    function loadData(keyword) {
+        showLoading("#investmentTable", "Loading...");
+        var data = keyword ? { module: "investment", action: "search", keyword: keyword } : { module: "investment", action: "display" };
+        ajaxPost(URL, data, function(response) {
+            renderTable(response.data || [], !!keyword);
+        }, function(msg) {
+            $("#investmentTable").html(emptyRow(8, "bi-wifi-off", "Couldn't load investments", msg));
+        });
+    }
 
-                var glSign = (gainLoss !== null && gainLoss >= 0) ? "+" : "";
-                var glClass = gainLoss !== null ? (gainLoss >= 0 ? "investment-gain" : "investment-loss") : "";
-                var rpSign = (returnPct !== null && returnPct >= 0) ? "+" : "";
-                var rpClass = returnPct !== null ? (returnPct >= 0 ? "investment-gain" : "investment-loss") : "";
-
-                html += '<tr>';
-                html += '<td class="col-id"><strong>' + escapeHtml(row.investment_id) + '</strong></td>';
-                html += '<td class="col-type">' + getTypeBadge(row.investment_type) + '</td>';
-                html += '<td class="col-name"><strong>' + escapeHtml(row.investment_name || '-') + '</strong></td>';
-                html += '<td class="col-invested text-end">' + formatCurrency(row.amount) + '</td>';
-                html += '<td class="col-current text-end">' + (hasCurrent ? formatCurrency(current) : '<span class="text-muted">Not updated</span>') + '</td>';
-                html += '<td class="col-gainloss text-end ' + glClass + '">' + (gainLoss !== null ? glSign + formatCurrency(gainLoss) : '\u2014') + '</td>';
-                html += '<td class="col-return text-center"><span class="' + rpClass + '">' + (returnPct !== null ? rpSign + parseFloat(returnPct).toFixed(2) + '%' : '\u2014') + '</span></td>';
-                html += '<td class="col-account">' + escapeHtml(row.account_name || '-') + '</td>';
-                html += '<td class="col-date">' + escapeHtml(formatDate(row.investment_date)) + '</td>';
-                html += '<td class="col-action text-center">';
-                html += '<button class="btn btn-sm btn-warning btnEdit" ';
-                html += 'data-id="' + row.investment_id + '" ';
-                html += 'data-account="' + row.account_id + '" ';
-                html += 'data-type="' + escapeHtml(row.investment_type) + '" ';
-                html += 'data-name="' + escapeHtml(row.investment_name || '') + '" ';
-                html += 'data-amount="' + row.amount + '" ';
-                html += 'data-current="' + (row.current_value !== null ? row.current_value : '') + '" ';
-                html += 'data-desc="' + escapeHtml(row.description || '') + '" ';
-                html += 'data-date="' + row.investment_date + '" ';
-                html += 'title="Edit"><i class="bi bi-pencil"></i></button> ';
-                html += '<button class="btn btn-sm btn-danger btnDelete" data-id="' + row.investment_id + '" title="Delete"><i class="bi bi-trash"></i></button>';
-                html += '</td>';
-                html += '</tr>';
-            });
-        } else {
-            html = '<tr><td colspan="10" class="text-center text-muted py-4"><i class="bi bi-inbox" style="font-size:1.5rem;"></i><br>No investment records found</td></tr>';
+    function renderTable(rows, isSearch) {
+        rowsById = {};
+        if (!rows.length) {
+            var action = (!isSearch && HAS_ACCOUNTS) ? '<button class="btn btn-primary btn-sm" onclick="$(\'#btnAdd\').click()"><i class="bi bi-plus-lg"></i> Add investment</button>' : '';
+            $("#investmentTable").html(isSearch
+                ? emptyRow(8, "bi-search", "No matching investments", "Try a different keyword.")
+                : emptyRow(8, "bi-graph-up-arrow", "No investments yet", "Record stocks, funds, crypto and more to see how they perform.", action));
+            return;
         }
+        var html = "";
+        rows.forEach(function(row) {
+            rowsById[row.investment_id] = row;
+            var invested = parseFloat(row.amount) || 0;
+            var hasCurrent = row.current_value !== null && row.current_value !== '' && row.current_value !== undefined;
+            var current = hasCurrent ? parseFloat(row.current_value) : null;
+            var gl = hasCurrent ? current - invested : null;
+            var pct = (gl !== null && invested > 0) ? (gl / invested) * 100 : null;
+            var glCls = gl === null ? 'text-muted' : (gl >= 0 ? 'text-success' : 'text-danger');
+
+            html += '<tr>';
+            html += '<td><div class="cell-title">' + escapeHtml(row.investment_name || '—') + '</div>' + (row.description ? '<div class="cell-sub truncate">' + escapeHtml(row.description) + '</div>' : '') + '</td>';
+            html += '<td><span class="pill ' + (typePills[row.investment_type] || 'pill-neutral') + '">' + escapeHtml(row.investment_type) + '</span></td>';
+            html += '<td class="text-end amount">' + formatCurrency(invested) + '</td>';
+            html += '<td class="text-end amount">' + (hasCurrent ? formatCurrency(current) : '<span class="text-muted fw-normal">Not set</span>') + '</td>';
+            html += '<td class="text-end amount ' + glCls + '">' + (gl === null ? '—' : (gl >= 0 ? '+' : '') + formatCurrency(gl) + '<div class="cell-sub">' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%</div>') + '</td>';
+            html += '<td>' + escapeHtml(row.account_name || '—') + '</td>';
+            html += '<td style="white-space:nowrap;">' + escapeHtml(formatDate(row.investment_date)) + '</td>';
+            html += '<td class="text-end"><div class="row-actions">';
+            html += '<button class="btn-icon btnEdit" data-id="' + row.investment_id + '" title="Edit / update value" aria-label="Edit"><i class="bi bi-pencil"></i></button>';
+            html += '<button class="btn-icon danger btnDelete" data-id="' + row.investment_id + '" title="Delete" aria-label="Delete"><i class="bi bi-trash"></i></button>';
+            html += '</div></td></tr>';
+        });
         $("#investmentTable").html(html);
     }
 
-    function loadData() {
-        showLoading("#investmentTable", "Loading investment records...");
-        $.ajax({
-            url: BASE_URL + "/db/request.php",
-            type: "POST",
-            data: { module: "investment", action: "display" },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                renderTable(response.data);
-            },
-            error: function() {
-                showAlert("#alert", "danger", "Failed to load investments. Please try again.");
-                $("#investmentTable").html('<tr><td colspan="10" class="text-center text-muted">Failed to load data</td></tr>');
-            }
-        });
+    function openForm(row) {
+        $("#invForm")[0].reset();
+        $("#inv_type_custom").hide().val('');
+        $("#inv_id").val(row ? row.investment_id : '');
+        if (row) {
+            $("#inv_name").val(row.investment_name || '');
+            setDropdownValue("inv_type_select", "inv_type_custom", row.investment_type);
+            $("#inv_amount").val(row.amount);
+            $("#inv_current").val(row.current_value !== null ? row.current_value : '');
+            $("#inv_account").val(row.account_id);
+            $("#inv_date").val(row.investment_date);
+            $("#inv_description").val(row.description || '');
+        } else {
+            $("#inv_date").val(todayISO());
+        }
+        $("#invModalTitle").text(row ? "Edit investment" : "Add investment");
+        $("#invSave").text(row ? "Save changes" : "Add investment");
+        modal.show();
     }
 
-    $("#investmentForm").on("submit", function(e) {
+    $("#invModal").on("shown.bs.modal", function() { $("#inv_name").focus(); });
+    $("#btnAdd").on("click", function() { openForm(null); });
+    $(document).on("click", ".btnEdit", function() { openForm(rowsById[$(this).data("id")]); });
+
+    $("#invForm").on("submit", function(e) {
         e.preventDefault();
+        $(".is-invalid").removeClass("is-invalid");
+
+        var type = getDropdownValue("inv_type_select", "inv_type_custom");
+        var amount = parseFloat($("#inv_amount").val());
+        var current = $("#inv_current").val();
+        var invalid = [];
+        if (!$("#inv_name").val().trim()) invalid.push("#inv_name");
+        if (!type) invalid.push($("#inv_type_select").val() === "Other" ? "#inv_type_custom" : "#inv_type_select");
+        if (!(amount > 0)) invalid.push("#inv_amount");
+        if (current !== "" && parseFloat(current) < 0) invalid.push("#inv_current");
+        if (!$("#inv_account").val()) invalid.push("#inv_account");
+        if (!$("#inv_date").val()) invalid.push("#inv_date");
+        if (invalid.length) {
+            $(invalid.join(",")).addClass("is-invalid");
+            $(invalid[0]).focus();
+            toast("danger", "Please complete the highlighted fields.");
+            return;
+        }
+
+        var id = $("#inv_id").val();
+        var data = {
+            module: "investment",
+            action: id ? "edit" : "add",
+            account_id: $("#inv_account").val(),
+            investment_type: type,
+            investment_name: $("#inv_name").val().trim(),
+            amount: amount,
+            current_value: current,
+            description: $("#inv_description").val().trim(),
+            investment_date: $("#inv_date").val()
+        };
+        if (id) data.investment_id = id;
+
         var $form = $(this);
-        var origText = $form.find('button[type="submit"]').html();
-
-        var investmentType = getDropdownValue("investment_type_select", "investment_type_custom");
-        if (!investmentType) {
-            showAlert("#alert", "danger", "Please select or enter an investment type.");
-            return;
-        }
-
         setFormLoading($form, true);
-
-        $.ajax({
-            url: BASE_URL + "/db/request.php",
-            type: "POST",
-            data: {
-                module: "investment",
-                action: "add",
-                account_id: $("#account_id").val(),
-                investment_type: investmentType,
-                investment_name: $("#investment_name").val(),
-                amount: $("#amount").val(),
-                current_value: $("#current_value").val(),
-                description: $("#description").val(),
-                investment_date: $("#investment_date").val()
-            },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    showAlert("#alert", "success", response.message);
-                    $form[0].reset();
-                    $("#investment_type_custom").hide().val('');
-                    loadData();
-                    loadSummary();
-                } else {
-                    showAlert("#alert", "danger", response.message);
-                }
-            },
-            error: function() {
-                showAlert("#alert", "danger", "An error occurred. Please try again.");
-            },
-            complete: function() {
-                setFormLoading($form, false, origText);
+        ajaxPost(URL, data, function(response) {
+            setFormLoading($form, false);
+            if (response.status == "success") {
+                modal.hide();
+                toast("success", response.message);
+                $("#searchKeyword").val("").closest(".search-input").removeClass("has-value");
+                loadData();
+                loadSummary();
+            } else {
+                toast("danger", response.message);
             }
-        });
-    });
-
-    $("#btnSearch").on("click", function() {
-        var keyword = $("#searchKeyword").val().trim();
-        if (keyword === "") { loadData(); return; }
-
-        showLoading("#investmentTable", "Searching...");
-        $.ajax({
-            url: BASE_URL + "/db/request.php",
-            type: "POST",
-            data: { module: "investment", action: "search", keyword: keyword },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                renderTable(response.data);
-            },
-            error: function() {
-                showAlert("#alert", "danger", "Search failed. Please try again.");
-                $("#investmentTable").html('<tr><td colspan="10" class="text-center text-muted">Search failed</td></tr>');
-            }
-        });
-    });
-
-    $("#btnClear").on("click", function() {
-        $("#searchKeyword").val("");
-        loadData();
-    });
-
-    $("#searchKeyword").on("keypress", function(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            $("#btnSearch").click();
-        }
-    });
-
-    $(document).on("click", ".btnEdit", function() {
-        $("#edit_investment_id").val($(this).data("id"));
-        $("#edit_account_id").val($(this).data("account"));
-        setDropdownValue("edit_investment_type_select", "edit_investment_type_custom", $(this).data("type"));
-        $("#edit_investment_name").val($(this).data("name"));
-        $("#edit_amount").val($(this).data("amount"));
-        $("#edit_current_value").val($(this).data("current"));
-        $("#edit_description").val($(this).data("desc"));
-        $("#edit_investment_date").val($(this).data("date"));
-        $("#editModal").modal("show");
-    });
-
-    $("#btnSaveEdit").on("click", function() {
-        var $btn = $(this);
-        var origText = $btn.html();
-
-        var investmentType = getDropdownValue("edit_investment_type_select", "edit_investment_type_custom");
-        if (!investmentType) {
-            showAlert("#alert", "danger", "Please select or enter an investment type.");
-            return;
-        }
-
-        $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm"></span> Saving...');
-
-        $.ajax({
-            url: BASE_URL + "/db/request.php",
-            type: "POST",
-            data: {
-                module: "investment",
-                action: "edit",
-                investment_id: $("#edit_investment_id").val(),
-                account_id: $("#edit_account_id").val(),
-                investment_type: investmentType,
-                investment_name: $("#edit_investment_name").val(),
-                amount: $("#edit_amount").val(),
-                current_value: $("#edit_current_value").val(),
-                description: $("#edit_description").val(),
-                investment_date: $("#edit_investment_date").val()
-            },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    showAlert("#alert", "success", response.message);
-                    $("#editModal").modal("hide");
-                    loadData();
-                    loadSummary();
-                } else {
-                    showAlert("#alert", "danger", response.message);
-                }
-            },
-            error: function() {
-                showAlert("#alert", "danger", "An error occurred. Please try again.");
-            },
-            complete: function() {
-                $btn.prop("disabled", false).html(origText);
-            }
+        }, function(msg) {
+            setFormLoading($form, false);
+            toast("danger", msg);
         });
     });
 
     $(document).on("click", ".btnDelete", function() {
-        if (!confirm("Are you sure you want to delete this investment record?")) return;
-
-        var $btn = $(this);
-        var origHtml = $btn.html();
-        $btn.prop("disabled", true).html('<span class="spinner-border spinner-border-sm"></span>');
-
-        $.ajax({
-            url: BASE_URL + "/db/request.php",
-            type: "POST",
-            data: { module: "investment", action: "delete", investment_id: $(this).data("id") },
-            dataType: "json",
-            timeout: 30000,
-            success: function(response) {
-                if (response.status == "success") {
-                    showAlert("#alert", "success", response.message);
-                    loadData();
-                    loadSummary();
-                } else {
-                    showAlert("#alert", "danger", response.message);
-                }
-            },
-            error: function() {
-                showAlert("#alert", "danger", "An error occurred. Please try again.");
-            },
-            complete: function() {
-                $btn.prop("disabled", false).html(origHtml);
-            }
+        var row = rowsById[$(this).data("id")];
+        confirmDialog({
+            title: "Delete this investment?",
+            message: (row.investment_name || row.investment_type) + " · " + formatCurrency(row.amount) + ". This can't be undone."
+        }, function() {
+            ajaxPost(URL, { module: "investment", action: "delete", investment_id: row.investment_id }, function(response) {
+                toast(response.status == "success" ? "success" : "danger", response.message);
+                if (response.status == "success") { loadData($("#searchKeyword").val().trim()); loadSummary(); }
+            });
         });
     });
-
 });

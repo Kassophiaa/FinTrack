@@ -16,8 +16,9 @@ $total_ratings = $admin->getTotalRatings();
 $total_advices = $admin->getTotalAdvices();
 $total_messages = $admin->getTotalMessages();
 $avg_rating = $admin->getAverageRating();
-$recent_users = $admin->getRecentUsers(5);
-$role_breakdown = $admin->getRoleBreakdown();
+$recent_users = $admin->getRecentUsers(6);
+
+$role_pills = ['admin' => 'pill-danger', 'advisor' => 'pill-info', 'user' => 'pill-neutral'];
 
 $title = "Dashboard";
 include '../includes/header.php';
@@ -25,140 +26,86 @@ include '../includes/navbar.php';
 
 ?>
 
-<div class="row">
-    <div class="col-md-3">
-        <?php include '../includes/sidebar_admin.php'; ?>
+<div class="hero-card">
+    <div>
+        <h2>Welcome, <?php echo e(explode(' ', trim($_SESSION['full_name']))[0]); ?></h2>
+        <p>Here's an overview of the FinTrack platform.</p>
     </div>
-    <div class="col-md-9">
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="manage_users.php" class="btn btn-light"><i class="bi bi-people"></i> Manage users</a>
+    </div>
+</div>
 
-        <div class="welcome-card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <h5>Welcome, <?php echo $_SESSION['full_name']; ?>!</h5>
-                    <p>Admin Dashboard — Manage users, permissions, and view system-wide statistics.</p>
-                </div>
-                <div class="welcome-icon d-none d-md-block">
-                    <i class="bi bi-shield-lock"></i>
-                </div>
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-sm-6">
+        <a class="stat-card" href="manage_users.php">
+            <div class="stat-top"><span class="stat-label">Active users</span><span class="icon-chip chip-primary"><i class="bi bi-people"></i></span></div>
+            <div class="stat-value"><?php echo intval($total_users); ?></div>
+        </a>
+    </div>
+    <div class="col-xl-3 col-sm-6">
+        <a class="stat-card" href="manage_users.php">
+            <div class="stat-top"><span class="stat-label">Clients</span><span class="icon-chip chip-success"><i class="bi bi-person"></i></span></div>
+            <div class="stat-value"><?php echo intval($total_clients); ?></div>
+        </a>
+    </div>
+    <div class="col-xl-3 col-sm-6">
+        <a class="stat-card" href="manage_users.php">
+            <div class="stat-top"><span class="stat-label">Advisors</span><span class="icon-chip chip-info"><i class="bi bi-briefcase"></i></span></div>
+            <div class="stat-value"><?php echo intval($total_advisors); ?></div>
+        </a>
+    </div>
+    <div class="col-xl-3 col-sm-6">
+        <a class="stat-card" href="ratings.php">
+            <div class="stat-top"><span class="stat-label">Average advisor rating</span><span class="icon-chip chip-warning"><i class="bi bi-star"></i></span></div>
+            <div class="stat-value"><?php echo $avg_rating > 0 ? e($avg_rating) . ' <span class="fs-6 text-muted fw-semibold">/ 5</span>' : '—'; ?></div>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header"><h3 class="card-title">Platform activity</h3></div>
+            <a class="list-row" href="permissions.php">
+                <span class="icon-chip chip-primary"><i class="bi bi-shield-check"></i></span>
+                <div class="row-main"><div class="row-title">Client–advisor connections</div><div class="row-sub">Active data-sharing permissions</div></div>
+                <div class="fw-bold fs-5"><?php echo intval($total_permissions); ?></div>
+            </a>
+            <div class="list-row">
+                <span class="icon-chip chip-success"><i class="bi bi-journal-text"></i></span>
+                <div class="row-main"><div class="row-title">Advice given</div><div class="row-sub">Across all advisors</div></div>
+                <div class="fw-bold fs-5"><?php echo intval($total_advices); ?></div>
             </div>
+            <div class="list-row">
+                <span class="icon-chip chip-info"><i class="bi bi-chat-dots"></i></span>
+                <div class="row-main"><div class="row-title">Messages sent</div><div class="row-sub">Between clients and advisors</div></div>
+                <div class="fw-bold fs-5"><?php echo intval($total_messages); ?></div>
+            </div>
+            <a class="list-row" href="ratings.php">
+                <span class="icon-chip chip-warning"><i class="bi bi-star"></i></span>
+                <div class="row-main"><div class="row-title">Ratings submitted</div><div class="row-sub">Client feedback on advisors</div></div>
+                <div class="fw-bold fs-5"><?php echo intval($total_ratings); ?></div>
+            </a>
         </div>
-
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="dashboard-stat-card bg-primary text-white">
-                    <div class="card-body">
-                        <div class="card-icon"><i class="bi bi-people"></i></div>
-                        <div class="card-title">Total Users</div>
-                        <h2><?php echo $total_users; ?></h2>
-                    </div>
-                </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3 class="card-title">Newest users</h3>
+                <a href="manage_users.php" class="small fw-semibold">View all</a>
             </div>
-            <div class="col-md-3">
-                <div class="dashboard-stat-card bg-success text-white">
-                    <div class="card-body">
-                        <div class="card-icon"><i class="bi bi-person-badge"></i></div>
-                        <div class="card-title">Advisors</div>
-                        <h2><?php echo $total_advisors; ?></h2>
+            <?php while ($u = $recent_users->fetch_assoc()) { ?>
+                <div class="list-row">
+                    <span class="avatar sm"><?php echo e(initials($u['full_name'])); ?></span>
+                    <div class="row-main">
+                        <div class="row-title"><?php echo e($u['full_name']); ?></div>
+                        <div class="row-sub">@<?php echo e($u['username']); ?> · <?php echo e($u['email']); ?></div>
                     </div>
+                    <span class="pill <?php echo $role_pills[$u['role']] ?? 'pill-neutral'; ?>"><?php echo e(roleLabel($u['role'])); ?></span>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="dashboard-stat-card bg-info text-white">
-                    <div class="card-body">
-                        <div class="card-icon"><i class="bi bi-person"></i></div>
-                        <div class="card-title">Clients</div>
-                        <h2><?php echo $total_clients; ?></h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="dashboard-stat-card bg-warning text-white">
-                    <div class="card-body">
-                        <div class="card-icon"><i class="bi bi-star-fill"></i></div>
-                        <div class="card-title">Avg. Rating</div>
-                        <h2><?php echo $avg_rating > 0 ? $avg_rating . '/5' : '—'; ?></h2>
-                    </div>
-                </div>
-            </div>
+            <?php } ?>
         </div>
-
-        <div class="row g-3 mb-4">
-            <div class="col-md-4">
-                <div class="form-card">
-                    <div class="card-header"><i class="bi bi-speedometer2"></i> Quick Actions</div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a href="manage_users.php" class="btn btn-outline-primary text-start"><i class="bi bi-people"></i> Manage Users</a>
-                            <a href="permissions.php" class="btn btn-outline-primary text-start"><i class="bi bi-shield-check"></i> View Permissions</a>
-                            <a href="ratings.php" class="btn btn-outline-primary text-start"><i class="bi bi-star"></i> View Ratings</a>
-                            <a href="settings.php" class="btn btn-outline-primary text-start"><i class="bi bi-gear"></i> Settings</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="form-card">
-                    <div class="card-header"><i class="bi bi-bar-chart-line"></i> User Breakdown</div>
-                    <div class="card-body">
-                        <table class="table table-sm table-borderless mb-0">
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-people"></i> Total Users</td>
-                                <td class="text-end fw-bold"><?php echo $total_users; ?></td>
-                            </tr>
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-person-badge"></i> Advisors</td>
-                                <td class="text-end fw-bold"><?php echo $total_advisors; ?></td>
-                            </tr>
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-person"></i> Clients</td>
-                                <td class="text-end fw-bold"><?php echo $total_clients; ?></td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <!-- <div class="col-md-4">
-                <div class="form-card">
-                    <div class="card-header"><i class="bi bi-activity"></i> Platform Activity</div>
-                    <div class="card-body">
-                        <table class="table table-sm table-borderless mb-0">
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-shield-check"></i> Permissions</td>
-                                <td class="text-end fw-bold"><?php echo $total_permissions; ?></td>
-                            </tr>
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-star"></i> Ratings</td>
-                                <td class="text-end fw-bold"><?php echo $total_ratings; ?></td>
-                            </tr>
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-journal-text"></i> Advices</td>
-                                <td class="text-end fw-bold"><?php echo $total_advices; ?></td>
-                            </tr>
-                            <tr>
-                                <td style="color: var(--text-secondary);"><i class="bi bi-chat-dots"></i> Messages</td>
-                                <td class="text-end fw-bold"><?php echo $total_messages; ?></td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div> -->
-            <div class="col-md-4">
-                <div class="form-card">
-                    <div class="card-header"><i class="bi bi-clock-history"></i> Recent Users</div>
-                    <div class="card-body">
-                        <table class="table table-sm table-borderless mb-0">
-                            <?php while ($u = $recent_users->fetch_assoc()): ?>
-                            <tr>
-                                <td style="color: var(--text-secondary);"><?php echo htmlspecialchars($u['full_name']); ?></td>
-                                <td class="text-end"><span class="badge bg-secondary"><?php echo $u['role']; ?></span></td>
-                            </tr>
-                            <?php endwhile; ?>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
 </div>
 

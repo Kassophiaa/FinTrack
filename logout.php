@@ -1,11 +1,10 @@
 <?php
 
-session_start();
-session_regenerate_id();
+include 'includes/config.php';
+
 session_unset();
 session_destroy();
 
-header("Location: index.php");
-exit;
+redirect(BASE_URL . "/index.php");
 
 ?>
