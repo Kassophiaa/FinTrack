@@ -1,0 +1,200 @@
+body.bg-light {
+    background: linear-gradient(135deg, #0f3d22 0%, #1a5632 40%, #2d8a4e 100%) !important;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.bg-light::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+.login-card {
+    border: none;
+    border-radius: var(--radius-xl);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    background: var(--bg-card);
+}
+
+.login-card .card-body {
+    padding: 40px 36px;
+}
+
+.login-card .login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-card .login-header .login-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    color: #fff;
+    font-size: 1.6rem;
+}
+
+.login-card .card-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+.login-card .text-muted {
+    font-size: 0.88rem;
+}
+
+.login-card .form-control {
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+    font-size: 0.9rem;
+}
+
+.login-card .form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(26, 86, 50, 0.1);
+}
+
+.login-card .btn-dark,
+.login-card .btn-primary {
+    border-radius: var(--radius-sm);
+    padding: 11px;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border: none;
+    transition: var(--transition);
+    font-size: 0.92rem;
+}
+
+.login-card .btn-dark:hover,
+.login-card .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(26, 86, 50, 0.3);
+}
+
+.login-card .form-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+}
+
+.login-card a {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.login-card a:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.register-container {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.register-card {
+    border: none;
+    border-radius: var(--radius-xl);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    background: var(--bg-card);
+}
+
+.register-card .card-body {
+    padding: 36px;
+}
+
+.register-card .register-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.register-card .register-header .register-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    color: #fff;
+    font-size: 1.6rem;
+}
+
+.register-card .card-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+.register-card .form-control,
+.register-card .form-select {
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+    font-size: 0.9rem;
+}
+
+.register-card .form-control:focus,
+.register-card .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(26, 86, 50, 0.1);
+}
+
+.register-card .btn-dark,
+.register-card .btn-primary {
+    border-radius: var(--radius-sm);
+    padding: 11px;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border: none;
+    transition: var(--transition);
+    font-size: 0.92rem;
+}
+
+.register-card .btn-dark:hover,
+.register-card .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(26, 86, 50, 0.3);
+}
+
+.register-card .form-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+}
+
+.register-card a {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.register-card a:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}

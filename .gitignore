@@ -1,0 +1,18 @@
+# Local database credentials
+db/db_config.php
+
+# Environment / secrets
+.env
+*.env
+
+# Database dumps
+*.sql.bak
+
+# Logs
+*.log
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

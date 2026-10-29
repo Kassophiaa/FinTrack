@@ -1,0 +1,326 @@
+.investment-summary-card {
+    border: none;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: var(--transition);
+    position: relative;
+}
+
+.investment-summary-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.investment-summary-card .card-body {
+    padding: 22px 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.investment-summary-card .card-icon {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    font-size: 2.5rem;
+    opacity: 0.15;
+    z-index: 0;
+}
+
+.investment-summary-card .card-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    opacity: 0.9;
+    margin-bottom: 10px;
+}
+
+.investment-summary-card h5 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.investment-summary-card small {
+    font-size: 0.78rem;
+    opacity: 0.85;
+}
+
+.investment-form-card {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    background: var(--bg-card);
+}
+
+.investment-form-card .card-header {
+    background-color: var(--bg-card);
+    border-bottom: 1px solid var(--border-light);
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 14px 20px;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.investment-form-card .card-header i {
+    margin-right: 8px;
+    color: var(--primary);
+}
+
+.investment-form-card .card-body {
+    padding: 20px;
+}
+
+.investment-form-card .form-label {
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+
+.investment-form-card .form-control,
+.investment-form-card .form-select {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    padding: 9px 14px;
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.investment-form-card .form-control:focus,
+.investment-form-card .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(26, 86, 50, 0.1);
+}
+
+.investment-form-card .input-group-text {
+    background-color: #f8f9fa;
+    border: 1px solid var(--border-color);
+    border-right: none;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.investment-form-card .input-group .form-control {
+    border-left: none;
+}
+
+.investment-form-card .input-group .form-control:focus {
+    border-color: var(--primary);
+}
+
+.investment-form-card .btn-add {
+    border-radius: var(--radius-sm);
+    padding: 9px 24px;
+    font-weight: 500;
+}
+
+.investment-table-card {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    background: var(--bg-card);
+}
+
+.investment-table-card .card-header {
+    background-color: var(--bg-card);
+    border-bottom: 1px solid var(--border-light);
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 14px 20px;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.investment-table-card .card-header i {
+    margin-right: 8px;
+    color: var(--primary);
+}
+
+.investment-table-card .card-body {
+    padding: 20px;
+}
+
+.investment-table-card .search-bar {
+    margin-bottom: 15px;
+}
+
+.investment-table-card .search-bar .form-control {
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    border: 1px solid var(--border-color);
+    padding: 9px 14px;
+    font-size: 0.9rem;
+}
+
+.investment-table-card .search-bar .form-control:focus {
+    border-color: var(--primary);
+    box-shadow: none;
+}
+
+.investment-table-card .search-bar .btn-dark {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 9px 16px;
+}
+
+.investment-table-card .search-bar .btn-secondary {
+    border-radius: 0;
+    padding: 9px 14px;
+    border-color: var(--border-color);
+}
+
+.investment-table {
+    margin-bottom: 0;
+    font-size: 0.88rem;
+    table-layout: fixed;
+    width: 100%;
+}
+
+.investment-table thead.table-dark th {
+    background-color: var(--primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 11px 12px;
+    border: none;
+    white-space: nowrap;
+}
+
+.investment-table .col-id        { width: 50px; min-width: 50px; }
+.investment-table .col-type      { width: 120px; min-width: 120px; }
+.investment-table .col-name      { width: 180px; min-width: 180px; }
+.investment-table .col-invested  { width: 130px; min-width: 130px; }
+.investment-table .col-current   { width: 140px; min-width: 140px; }
+.investment-table .col-gainloss  { width: 130px; min-width: 130px; }
+.investment-table .col-return    { width: 100px; min-width: 100px; }
+.investment-table .col-account   { width: 160px; min-width: 160px; }
+.investment-table .col-date      { width: 120px; min-width: 120px; }
+.investment-table .col-action    { width: 100px; min-width: 100px; }
+
+.investment-table tbody td {
+    padding: 10px 12px;
+    vertical-align: middle;
+    border-color: var(--border-light);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.investment-table-hover tbody tr:hover {
+    background-color: #f8faf9;
+}
+
+.investment-table .btn-sm {
+    padding: 5px 12px;
+    font-size: 0.82rem;
+    border-radius: var(--radius-sm);
+}
+
+.investment-table .btn-sm i {
+    font-size: 0.85rem;
+}
+
+.investment-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+.investment-badge.badge-stocks {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.investment-badge.badge-mutual-funds {
+    background-color: #f3e8ff;
+    color: #7c3aed;
+}
+
+.investment-badge.badge-bonds {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.investment-badge.badge-crypto {
+    background-color: #fff7ed;
+    color: #c2410c;
+}
+
+.investment-badge.badge-real-estate {
+    background-color: #e0f2fe;
+    color: #0369a1;
+}
+
+.investment-badge.badge-other {
+    background-color: #f3f4f6;
+    color: #4b5563;
+}
+
+.investment-gain {
+    color: var(--success);
+    font-weight: 600;
+}
+
+.investment-loss {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.investment-edit-modal .modal-content {
+    border-radius: var(--radius-lg);
+    border: none;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.15);
+}
+
+.investment-edit-modal .modal-header {
+    border-bottom: 1px solid var(--border-light);
+    padding: 16px 24px;
+}
+
+.investment-edit-modal .modal-body {
+    padding: 20px 24px;
+}
+
+.investment-edit-modal .modal-body .form-label {
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+
+.investment-edit-modal .modal-body .form-control,
+.investment-edit-modal .modal-body .form-select {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    padding: 9px 14px;
+    font-size: 0.9rem;
+}
+
+.investment-edit-modal .modal-body .form-control:focus,
+.investment-edit-modal .modal-body .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(26, 86, 50, 0.1);
+}
+
+.investment-edit-modal .modal-body .input-group-text {
+    background-color: #f8f9fa;
+    border: 1px solid var(--border-color);
+    border-right: none;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.investment-edit-modal .modal-body .input-group .form-control {
+    border-left: none;
+}
+
+.investment-edit-modal .modal-footer {
+    border-top: 1px solid var(--border-light);
+    padding: 12px 24px;
+}

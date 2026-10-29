@@ -1,0 +1,93 @@
+.table-card {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    background: var(--bg-card);
+}
+
+.table-card .card-header {
+    background-color: var(--bg-card);
+    border-bottom: 1px solid var(--border-light);
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 14px 20px;
+}
+
+.table-card .card-header i {
+    margin-right: 8px;
+    color: var(--primary);
+}
+
+.table-responsive {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.table {
+    margin-bottom: 0;
+    font-size: 0.88rem;
+}
+
+.table thead.table-dark th {
+    background-color: var(--primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border: none;
+}
+
+.table tbody td {
+    padding: 11px 16px;
+    vertical-align: middle;
+    border-color: var(--border-light);
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8faf9;
+}
+
+.table-bordered {
+    border-color: var(--border-light);
+}
+
+.table-bordered td,
+.table-bordered th {
+    border-color: var(--border-light);
+}
+
+.table .btn-sm {
+    padding: 5px 12px;
+    font-size: 0.82rem;
+    border-radius: var(--radius-sm);
+}
+
+.table .btn-sm i {
+    font-size: 0.85rem;
+}
+
+.table .badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+}
+
+.table .text-center {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 12px;
+    display: block;
+    opacity: 0.4;
+}
